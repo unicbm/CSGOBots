@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSGO botprofile视角阻尼系统设置导论</title>
+
+    <!-- 引入 KaTeX 用于渲染 LaTeX 公式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0KOVEMVIARBEGEOTNAD9oR2+pLRdaUhcmDU4dwKGaGnaD/bzJxMXওর" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+
+    <style>
+        /* --- 字体引入 --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap');
+
+        /* --- CSS变量定义 --- */
+        :root {
+            /* 基础色调 */
+            --fg: #EAEAEA; /* 前景色，主要文本 */
+            --muted: #A0A0A0; /* 柔和色，次要文本 */
+            --accent-color: #4cabff; /* 强调色，蓝色能量感 */
+            --accent-glow: rgba(76, 171, 255, 0.4); /* 强调色发光，更柔和 */
+            
+            /* 背景透明度层级 (深色模式) */
+            --bg-transparent-0: rgba(0, 0, 0, 0);   /* 完全透明 (用于外部容器) */
+            --bg-transparent-1: rgba(0, 0, 0, 0.4); /* 主要内容块 (section) 背景，明显可见 */
+            --bg-transparent-2: rgba(0, 0, 0, 0.5); /* 卡片、代码块背景，更实一点，突出 */
+            --bg-transparent-3: rgba(0, 0, 0, 0.6); /* 悬停/激活状态，更深 */
+            --backdrop-blur: 8px; /* 磨砂玻璃效果强度 */
+
+            /* 边框与线条 */
+            --border-thin: rgba(255, 255, 255, 0.08); /* 极细边框 */
+            --border-light: rgba(255, 255, 255, 0.15); /* 常规边框 */
+            
+            /* 阴影与发光 */
+            --shadow-subtle: rgba(0, 0, 0, 0.4); /* 轻微阴影 */
+            --shadow-elevated: rgba(0, 0, 0, 0.7); /* 突出阴影 */
+            
+            /* 字体与圆角 */
+            --font-main: 'Inter', sans-serif;
+            --font-code: 'Fira Code', monospace;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+
+            /* 状态色 */
+            --success-color: #34d399; /* 成功 */
+            --warning-color: #f59e0b; /* 警告 */
+        }
+
+        html.light-mode {
+            /* 浅色主题调整 */
+            --fg: #333333;
+            --muted: #6b7280;
+            --accent-color: #006ae6;
+            --accent-glow: rgba(0, 106, 230, 0.15);
+
+            --bg-transparent-0: rgba(255, 255, 255, 0);
+            --bg-transparent-1: rgba(255, 255, 255, 0.8);
+            --bg-transparent-2: rgba(255, 255, 255, 0.9);
+            --bg-transparent-3: rgba(255, 255, 255, 0.95);
+            --backdrop-blur: 5px;
+
+            --border-thin: rgba(0, 0, 0, 0.08);
+            --border-light: rgba(0, 0, 0, 0.15);
+            
+            --shadow-subtle: rgba(0, 0, 0, 0.1);
+            --shadow-elevated: rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- 全局重置与基础样式 --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: transparent; /* 背景交给 Canvas */
+            color: var(--fg);
+            font-family: var(--font-main);
+            font-size: 17px;
+            line-height: 1.8;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            height: 100%;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* 星空背景 Canvas */
+        #bgCanvas{
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: #000; /* Fallback in case JS doesn't load/run */
+        }
+
+        /* --- 核心布局：侧边栏 + 主内容容器 --- */
+        .page-wrapper {
+            display: grid;
+            grid-template-columns: 1fr;
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            padding-top: 5rem;
+            padding-bottom: 5rem;
+            min-height: 100vh;
+            position: relative;
+            z-index: 10;
+        }
+
+        @media (min-width: 1024px) {
+            .page-wrapper {
+                grid-template-columns: 280px 1fr;
+                gap: 5rem;
+                padding: 0 3rem;
+                padding-top: 5rem;
+                padding-bottom: 5rem;
+            }
+        }
+        
+        main {
+            min-width: 0;
+            position: relative;
+        }
+
+        /* --- 左侧目录 (TOC) --- */
+        .table-of-contents {
+            display: none;
+            position: sticky;
+            top: 5rem;
+            height: calc(100vh - 10rem);
+            overflow-y: auto;
+            align-self: start;
+            padding: 2rem 0;
+            background: var(--bg-transparent-1);
+            border: 1px solid var(--border-thin);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 4px 15px var(--shadow-subtle);
+            backdrop-filter: blur(var(--backdrop-blur));
+            -webkit-backdrop-filter: blur(var(--backdrop-blur));
+            transition: all 0.3s ease;
+            transform: translateY(0);
+        }
+        @media (min-width: 1024px) {
+            .table-of-contents {
+                display: block;
+                margin-right: 0;
+            }
+        }
+
+        .table-of-contents::-webkit-scrollbar { width: 0; }
+        .table-of-contents .toc-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+            padding: 0 1.5rem;
+            opacity: 0.8;
+        }
+        .table-of-contents ul { list-style: none; padding-left: 0; }
+        .table-of-contents li { margin-bottom: 0.2rem; }
+        .table-of-contents ul ul { padding-left: 1rem; margin-top: 0.1rem; }
+        .table-of-contents a {
+            display: block;
+            text-decoration: none;
+            color: var(--muted);
+            font-size: 0.95rem;
+            font-weight: 400;
+            padding: 0.6rem 1.5rem;
+            border-left: 2px solid transparent;
+            transition: all 0.2s ease, border-left-color 0.2s ease;
+            position: relative; z-index: 1;
+        }
+        .table-of-contents a:hover {
+            color: var(--fg);
+            background-color: var(--bg-transparent-2);
+            border-left-color: var(--accent-color);
+        }
+        .table-of-contents a.active {
+            color: var(--accent-color);
+            background-color: var(--bg-transparent-2);
+            border-left-color: var(--accent-color);
+            font-weight: 600;
+            transform: translateX(5px);
+        }
+
+        /* --- 主题切换按钮 --- */
+        #theme-toggle {
+            position: fixed; top: 2rem; right: 2rem;
+            width: 50px; height: 50px; border-radius: 50%;
+            background-color: var(--bg-transparent-2);
+            border: 1px solid var(--border-light);
+            cursor: pointer; z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px var(--shadow-elevated);
+            overflow: hidden; transition: all 0.3s ease;
+            backdrop-filter: blur(var(--backdrop-blur));
+            -webkit-backdrop-filter: blur(var(--backdrop-blur));
+        }
+        #theme-toggle svg { width: 22px; height: 22px; position: absolute; transition: transform 0.3s ease, opacity 0.3s ease; }
+        #theme-toggle .sun-icon { fill: var(--fg); opacity: 0; transform: translateY(20px); }
+        #theme-toggle .moon-icon { fill: var(--fg); opacity: 1; transform: translateY(0); }
+        html.light-mode #theme-toggle .sun-icon { opacity: 1; transform: translateY(0); }
+        html.light-mode #theme-toggle .moon-icon { opacity: 0; transform: translateY(-20px); }
+
+
+        /* --- 头部 (Page Title) --- */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+            background: var(--bg-transparent-0);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            padding-top: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .header h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--fg);
+            margin-bottom: 0.75rem;
+            text-shadow: 0 0 25px var(--accent-glow);
+            transition: all 0.3s ease;
+            letter-spacing: 0.02em;
+            pointer-events: auto;
+        }
+        .header .subtitle {
+            font-size: clamp(1.1rem, 2vw, 1.4rem);
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.01em;
+            pointer-events: auto;
+        }
+        .header .author {
+            font-size: 0.9rem;
+            color: var(--muted);
+            line-height: 1.5;
+            opacity: 0.8;
+            pointer-events: auto;
+        }
+
+        /* --- 通用内容排版 --- */
+        section {
+            scroll-margin-top: 80px;
+            padding: 2rem;
+            margin-top: 2rem;
+            border: 1px solid var(--border-thin);
+            border-radius: var(--radius-md);
+            background: var(--bg-transparent-1);
+            box-shadow: 0 4px 15px var(--shadow-subtle);
+            backdrop-filter: blur(var(--backdrop-blur));
+            -webkit-backdrop-filter: blur(var(--backdrop-blur));
+            transition: all 0.3s ease;
+            position: relative;
+            transform: translateZ(0);
+        }
+        section:first-of-type {
+            margin-top: 0;
+        }
+        section::before {
+             content: '';
+             position: absolute;
+             top: 0;
+             left: 50%;
+             transform: translateX(-50%);
+             width: 80%;
+             height: 1px;
+             background: linear-gradient(90deg, transparent, var(--border-thin), transparent);
+             opacity: 0.5;
+        }
+        h3, h4 { color: var(--fg); letter-spacing: 0.02em; }
+        h3 {
+            font-size: clamp(1.5rem, 3vw, 2.2rem);
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-light);
+            text-shadow: 0 0 10px rgba(76, 171, 255, 0.2);
+        }
+        h4 {
+            font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+            font-weight: 500;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+        }
+        p, ul, ol { margin-bottom: 1.25rem; opacity: 0.9; }
+        ul, ol { padding-left: 1.8rem; }
+        li { margin-bottom: 0.8rem; }
+        strong { color: var(--accent-color); font-weight: 600; }
+        hr {
+            border: 0; height: 1px;
+            background-image: linear-gradient(to right, transparent, var(--border-light), transparent);
+            margin: 4rem 0;
+            opacity: 0.4;
+        }
+        a.annotation-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--accent-color);
+            cursor: help;
+            transition: all 0.2s ease;
+        }
+        a.annotation-link:hover {
+            color: var(--fg);
+            border-bottom-color: transparent;
+            text-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        /* --- 代码、公式、卡片 --- */
+        code {
+            font-family: var(--font-code);
+            background-color: var(--bg-transparent-2);
+            color: var(--fg);
+            padding: 0.2em 0.5em;
+            border-radius: var(--radius-sm);
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-thin);
+            display: inline-block;
+            line-height: 1.4;
+            vertical-align: middle;
+        }
+        pre code {
+            display: block;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            background-color: var(--bg-transparent-2);
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 10px var(--shadow-subtle);
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            backdrop-filter: blur(var(--backdrop-blur));
+            -webkit-backdrop-filter: blur(var(--backdrop-blur));
+        }
+        .katex-display {
+            background-color: var(--bg-transparent-2);
+            padding: 1.8rem;
+            margin: 2rem 0;
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 6px 20px var(--shadow-elevated);
+            backdrop-filter: blur(var(--backdrop-blur));
+            -webkit-backdrop-filter: blur(var(--backdrop-blur));
+            transition: all 0.3s ease;
+        }
+        .katex-display:hover {
+            box-shadow: 0 0 20px var(--accent-glow);
+            border-color: var(--accent-color);
+        }
+        .template-card {
+            background-color: var(--bg-transparent-2);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 1.8rem 2.2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px var(--shadow-subtle);
+            backdrop-filter: blur(var(--backdrop-blur));
+            -webkit-backdrop-filter: blur(var(--backdrop-blur));
+            transition: transform .35s ease, background-color .35s ease, border-color .35s ease, box-shadow .35s ease;
+        }
+        .template-card:hover {
+            transform: translateY(-5px);
+            background-color: var(--bg-transparent-3);
+            border-color: var(--accent-color);
+            box-shadow: 0 8px 25px var(--shadow-elevated);
+        }
+        .template-card > h4:first-child { margin-top: 0; }
+
+        /* --- 参数分析器 (Calculator) --- */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.8rem;
+            margin-bottom: 2rem;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 0.6rem;
+            color: var(--muted);
+            letter-spacing: 0.03em;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            font-family: var(--font-code);
+            font-size: 1.1rem;
+            background-color: var(--bg-transparent-1);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            color: var(--fg);
+            transition: all 0.2s ease;
+            caret-color: var(--accent-color);
+        }
+        .input-group input:focus {
+            border-color: var(--accent-color);outline: none;
+            box-shadow: 0 0 0 4px var(--accent-glow);
+            background-color: var(--bg-transparent-2);
+        }
+        #calculate-btn {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.3s ease, box-shadow 0.3s ease;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        #calculate-btn:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        #analysis-result {
+            margin-top: 2.5rem;
+            padding: 1.5rem;
+            border-top: 1px dashed var(--border-thin);
+            color: var(--muted);
+        }
+        #analysis-result h4 {
+            margin-top: 0;
+            color: var(--fg);
+        }
+        #analysis-result ul { list-style-type: disc; padding-left: 1.5rem; margin-top: 1rem; }
+        #analysis-result li { margin-bottom: 0.8rem; }
+        #analysis-result .warn { color: var(--warning-color); }
+        #analysis-result .ok { color: var(--success-color); }
+
+        /* --- 脚注/注释区域 --- */
+        .annotations-section {
+            margin-top: 4rem;
+            padding-top: 3rem;
+            border-top: 1px solid var(--border-light);
+            opacity: 0.8;
+            padding-left: 2rem;
+            padding-right: 2rem;
+            background: var(--bg-transparent-1);
+            border-radius: var(--radius-md);
+            box-shadow: 0 4px 15px var(--shadow-subtle);
+            backdrop-filter: blur(var(--backdrop-blur));
+            -webkit-backdrop-filter: blur(var(--backdrop-blur));
+            transition: all 0.3s ease;
+        }
+        .annotations-section h3 {
+            border-bottom: none;
+            text-shadow: none;
+            color: var(--muted);
+        }
+        
+        /* --- 页脚 --- */
+        footer {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-thin);
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.9em;
+            opacity: 0.7;
+            letter-spacing: 0.01em;
+            padding-left: 2rem;
+            padding-right: 2rem;
+            background: var(--bg-transparent-1); 
+            border-radius: var(--radius-md);
+            box-shadow: 0 4px 15px var(--shadow-subtle);
+            backdrop-filter: blur(var(--backdrop-blur));
+            -webkit-backdrop-filter: blur(var(--backdrop-blur));
+            transition: all 0.3s ease;
+        }
+
+        /* --- 渐入动画 --- */
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .reveal.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 浅色模式下KaTeX颜色调整 */
+        html.light-mode .katex { color: var(--fg) !important; }
+        html.light-mode .katex-display .base { color: var(--fg) !important; }
+
+        /* 针对KaTeX背景色的特殊处理 */
+        .katex-display .katex {
+            color: var(--fg) !important;
+        }
+        .katex-display .base {
+            color: var(--fg) !important;
+        }
+        .katex-html {
+            color: var(--fg) !important;
+        }
+    </style>
+    
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+</head>
+<body>
+    <canvas id="bgCanvas"></canvas> <!-- 星空背景 Canvas -->
+    
+    <button id="theme-toggle" aria-label="Toggle theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.697 6.303a.75.75 0 010 1.06l-1.591 1.591a.75.75 0 11-1.06-1.06l1.591-1.591a.75.75 0 011.06 0zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5h2.25a.75.75 0 01.75.75zM17.636 17.636a.75.75 0 01-1.06 0l-1.591-1.591a.75.75 0 111.06-1.06l1.591 1.591a.75.75 0 010 1.06zM12 21.75a.75.75 0 01-.75-.75v-2.25a.75.75 0 011.5 0v2.25a.75.75 0 01-.75-.75zM6.303 18.697a.75.75 0 01-1.06 0l-1.591-1.591a.75.75 0 111.06-1.06l1.591 1.591a.75.75 0 010 1.06zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM6.343 7.343a.75.75 0 010-1.06l1.591-1.591a.75.75 0 111.06 1.06L7.403 7.343a.75.75 0 01-1.06 0z"/></svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.981A10.503 10.503 0 0112 22.5 10.5 10.5 0 011.5 12c0-3.374 1.558-6.444 4.028-8.472a.75.75 0 01.819.162z"/></svg>
+    </button>
+    
+    <div class="page-wrapper">
+        <nav class="table-of-contents reveal" id="toc-container">
+            <div class="toc-title">ON THIS PAGE</div>
+            <ul id="toc-list"></ul>
+        </nav>
+
+        <main>
+            <header class="header reveal">
+                <h1>botprofile 阻尼系统导论</h1>
+                <p class="subtitle">关于 botprofile 瞄准参数的深入剖析</p>
+                <p class="author">作者: un1<br>powered by Gemini</p>
+            </header>
+            
+            <section id="s-preface" class="reveal">
+                <h3 id="s-preface-title">前言</h3>
+                <p>你是否觉得游戏默认BOT过于迟钝，无法提供有效练习？或者，想创造一个能模仿顶级Pro的Bot作为专属陪练？</p>
+                <p>通过修改 <strong class="annotation-link" href="#anno-botprofile">botprofile.db</strong> 文件中的几个参数，你就能完全掌控BOT的瞄准行为。本导论将以最直观的方式，带你走进“BOT改造”的世界。</p>
+            </section>
+            
+            <hr>
+
+            <section id="s-chapter-1" class="reveal">
+                <h3 id="s-chapter-1-title">第一章：物理学基础 - 二阶阻尼系统</h3>
+                <p>BOT的瞄准系统在物理学上是一个经典的“质量-弹簧-阻尼器系统”，亦称二阶系统。</p>
+                <p>想象一个悬挂在弹簧上的重物，拉开后松手，它会来回振荡并最终停止。BOT的准星瞄准过程与此完全相同：</p>
+                <ul>
+                    <li><strong>质量 ($m$)</strong>: 准星的“惯性”。我们简化为 $m=1$。</li>
+                    <li><strong>弹簧 (Spring)</strong>: 将准星“拉”向目标的力。弹簧越硬，拉力越强，启动越快。这就是<strong>刚度 ($k$)</strong>。</li>
+                    <li><strong>阻尼器 (Damper)</strong>: 对抗运动的“阻力”，如同汽车减震器。它负责“刹车”，防止无限振荡。这就是<strong>阻尼 ($c$)</strong>。</li>
+                </ul>
+                <p>这三者遵循一个核心运动方程：</p>
+                $$m\ddot{x} + c\dot{x} + kx = 0$$
+                <p>其中，$x$ 是准星与目标的距离，$\dot{x}$ 是速度，$\ddot{x}$ 是加速度。此方程描述了系统如何从偏差状态 ($x > 0$) 回归平衡 ($x=0$)。</p>
+                
+                <h4 id="s-sub-1-1">关键概念：阻尼比</h4>
+                <p>系统的行为由<strong>阻尼比 (Damping Ratio, $\zeta$)</strong>决定，它精确描述了“刹车”与“引擎”的匹配度。</p>
+                $$\zeta = \frac{c}{c_{\text{crit}}} = \frac{c}{2\sqrt{mk}}$$
+                <p>由于我们视质量 $m=1$，公式简化为：</p>
+                $$\zeta = \frac{c}{2\sqrt{k}}$$
+                <p>根据 $\zeta$ 的值，系统呈现三种行为模式：</p>
+                <ol>
+                    <li><strong>欠阻尼 (Underdamped, $\zeta < 1$)</strong>: 刹车不足。系统会快速冲向目标并<strong>过冲 (Overshoot)</strong>，即超过目标后再反向修正。这模拟了人类带有微小修正的侵略性甩枪。</li>
+                    <li><strong>临界阻尼 (Critically Damped, $\zeta = 1$)</strong>: 完美制动。理论最优解，以<strong>最快速度</strong>到达目标且<strong>无过冲</strong>。如同完美的机器人。</li>
+                    <li><strong>过阻尼 (Overdamped, $\zeta > 1$)</strong>: 刹车过猛。系统缓慢平滑地接近目标，无过冲风险但牺牲了速度。这模拟了极稳定的跟枪和架点。</li>
+                </ol>
+            </section>
+            
+            <hr>
+
+            <section id="s-chapter-2" class="reveal">
+                <h3 id="s-chapter-2-title">第二章：核心概念 - 瞄准如赛车</h3>
+                <p>将BOT的每次瞄准想象成一辆赛车冲向终点。控制这辆“赛车”的是三个核心参数：</p>
+                 <p><em>注意：实际上还有后缀为<code>_Attack</code>的三个对应参数，设置思路完全相同。</em></p>
+                <ol>
+                    <li><strong><code>LookAngleStiffnessNormal</code> (刚度 $k$) - 引擎马力</strong></li>
+                    <li><strong><code>LookAngleDampingNormal</code> (阻尼 $c$) - 刹车系统</strong></li>
+                    <li><strong><code>LookAngleAccelNormal</code> (加速度) - 油门响应</strong></li>
+                </ol>
+                <p>我们的目标就是调校“引擎”($k$)与“刹车”($c$)，精确控制赛车的<strong>阻尼比 ($\zeta$)</strong>，使其以我们期望的方式运动。</p>
+            </section>
+            
+            <hr>
+
+            <section id="s-chapter-3" class="reveal">
+                <h3 id="s-chapter-3-title" data-toc-title="第三章：核心三参数详解">第三章：核心三参数详解</h3><!-- Added data-toc-title -->
+                <h4 id="s-sub-3-1" data-toc-title="LookAngleStiffnessNormal (刚度 k)"><code>LookAngleStiffnessNormal</code> (刚度 $k$)</h4><!-- Added data-toc-title -->
+                <ul>
+                    <li><strong>作用:</strong> 瞄准的“力量”或“爆发力”。数值越高，启动越快，感觉越“猛”。</li>
+                    <li><strong>总结:</strong> <strong>刚度决定了BOT瞄准的启动速度。</strong></li>
+                </ul>
+                <h4 id="s-sub-3-2" data-toc-title="LookAngleDampingNormal (阻尼 c)"><code>LookAngleDampingNormal</code> (阻尼 $c$)</h4>
+                <ul>
+                    <li><strong>作用:</strong> 瞄准的“稳定器”或“刹车”。负责在准星到达目标时减速，防止“甩过头”。</li>
+                    <li><strong>总结:</strong> <strong>阻尼决定了BOT瞄准停止时的稳定性。</strong></li>
+                </ul>
+                <h4 id="s-sub-3-3"><code>LookAngleAccelNormal</code> (加速度)</h4>
+                <ul>
+                    <li><strong>作用:</strong> 瞄准加速度的上限。值太低会限制性能。</li>
+                    <li><strong>总结:</strong> <strong>将其设为超大值即可</strong>，避免成为瓶颈。推荐值：<code>200000.0</code>。</li>
+                </ul>
+            </section>
+            
+            <hr>
+
+            <section id="s-chapter-4" class="reveal">
+                <h3 id="s-chapter-4-title" data-toc-title="第四章：黄金法则 - 刚度与阻尼的配比">第四章：黄金法则 - 刚度与阻尼的配比</h3><!-- Added data-toc-title -->
+                <p><strong>刚度（引擎）与阻尼（刹车）必须相互匹配。</strong> 如何找到完美的“刹车”来适配你的“引擎”？这就是我们的魔法公式：</p>
+                $$c_{\text{crit}} = 2\sqrt{k}$$
+                <p>这个 $c_{\text{crit}}$ 是实现临界阻尼 ($\zeta = 1$) 的完美值，也是我们所有调校的<strong>基准点</strong>。</p>
+            </section>
+            
+            <hr>
+            
+            <section id="s-chapter-5" class="reveal">
+                <h3 id="s-chapter-5-title">第五章：配置模板</h3>
+                <p>根据你的需求，直接从以下模板中选择，或以此为基础进行微调。</p>
+                
+                <div class="template-card">
+                    <h4 id="s-template-1">模板一：Pro Player (职业选手)</h4>
+                    <ul>
+                        <li><code>LookAngleStiffnessNormal</code> ($k$) = <code>3600.0</code></li>
+                        <li><em>计算临界阻尼：$c_{\text{crit}} = 2\sqrt{3600} = 120.0$</em></li>
+                        <li><code>LookAngleDampingNormal</code> ($c$) = <code>100.0</code></li>
+                        <li><em>分析：阻尼 $c=100$ 小于临界值 $120$，阻尼比 $\zeta \approx 0.83$。这将带来一次快速、可控的过冲，模拟职业哥的肌肉记忆。</em></li>
+                    </ul>
+                </div>
+
+                <div class="template-card">
+                    <h4 id="s-template-2">模板二：The God Machine (玩机器)</h4>
+                    <ul>
+                        <li><code>LookAngleStiffnessNormal</code> ($k$) = <code>7200.0</code></li>
+                        <li><em>计算临界阻尼：$c_{\text{crit}} = 2\sqrt{7200} \approx 169.7$</em></li>
+                        <li><code>LookAngleDampingNormal</code> ($c$) = <code>169.7</code></li>
+                        <li><em>分析：阻尼 $c$ 与临界值 $c_{\text{crit}}$ 相等，阻尼比 $\zeta = 1$。实现理论最快无过冲瞄准。</em></li>
+                    </ul>
+                </div>
+
+                <div class="template-card">
+                    <h4 id="s-template-3">模板三：The Anchor (稳如泰山)</h4>
+                    <ul>
+                        <li><code>LookAngleStiffnessNormal</code> ($k$) = <code>3000.0</code></li>
+                        <li><em>计算临界阻尼：$c_{\text{crit}} = 2\sqrt{3000} \approx 109.5$</em></li>
+                        <li><code>LookAngleDampingNormal</code> ($c$) = <code>130.0</code></li>
+                        <li><em>分析：阻尼 $c=130$ 大于临界值 $109.5$，阻尼比 $\zeta \approx 1.19$。消除任何过冲，带来磁铁般吸附手感。</em></li>
+                    </ul>
+                </div>
+            </section>
+            
+            <hr>
+
+            <section id="s-calculator" class="reveal">
+                <h3 id="s-calculator-title">自定义参数分析器</h3>
+                <p>在这里输入你的参数，看看它们组合起来会产生什么样的瞄准风格。</p>
+                <p>默认的值是un1目前服务器自用的。</p>
+                <div class="template-card">
+                    <div class="calculator-grid">
+                        <div class="input-group">
+                            <label for="input-accel">Acceleration</label>
+                            <input type="number" id="input-accel" value="200000.0">
+                        </div>
+                        <div class="input-group">
+                            <label for="input-stiffness">Stiffness (k)</label>
+                            <input type="number" id="input-stiffness" value="3600.0">
+                        </div>
+                        <div class="input-group">
+                            <label for="input-damping">Damping (c)</label>
+                            <input type="number" id="input-damping" value="100.0">
+                        </div>
+                    </div>
+                    <button id="calculate-btn">分析参数</button>
+                    <div id="analysis-result">
+                        <p style="text-align: center; color: var(--muted);">输入参数后点击上方按钮进行分析。</p>
+                    </div>
+                </div>
+            </section>
+
+            <hr>
+
+            <section id="s-conclusion" class="reveal">
+                <h3 id="s-conclusion-title">结语</h3>
+                <p>你已掌握BOT瞄准系统的核心秘密。大胆尝试，运用上方的分析器检验你的想法，创造出想象中的任何对手。祝你在自定义BOT的世界里玩得愉快！</p>
+            </section>
+
+            <hr>
+
+            <section id="s-qq-group" class="reveal">
+                <h3 id="s-qq-group-title">有疑问吗？</h3>
+                <p>如果你对Bot的设置或CS:GO Bot系统仍有疑问，或者想和更多爱好者交流，欢迎加入我们的QQ群！</p>
+                <p><a href="https://qm.qq.com/q/PaVJyWSXwy" target="_blank" style="color: var(--accent-color); text-decoration: underline;">un1的小群</a></p>
+                <p><a href="https://space.bilibili.com/510000125" target="_blank" style="color: var(--accent-color); text-decoration: underline;">un1的b站主页</a></p>
+            </section>
+
+             <footer class="annotations-section reveal" id="annotations">
+                <h3 id="annotations-title">注释</h3>
+                <p id="anno-botprofile"><strong>botprofile.db:</strong> 在SteamLibrary\steamapps\common\Counter-Strike Global Offensive\csgo</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- 核心功能脚本 -->
+    <script>
+/* 星空背景动画 */
+const canvas = document.getElementById("bgCanvas");
+const ctx = canvas.getContext("2d");
+let w, h, stars = [];
+
+function resize() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+function createStar() {
+  const cameraZ = w * 0.8; 
+  const z = Math.random() * cameraZ * 0.9 + (cameraZ * 0.1); 
+
+  const initialXRange = w * (z / cameraZ) * 1.5;
+  const initialYRange = h * (z / cameraZ) * 1.5;
+
+  // 关键调整：降低亮度范围，使其更暗淡
+  const hueBase = Math.random() < 0.5 ? 200 : 50; 
+  const hueVariation = (Math.random() - 0.5) * 30; 
+  const saturation = Math.floor(Math.random() * 20) + 20; 
+  const lightness = Math.floor(Math.random() * 15) + 35; // ✨ 亮度从 70-90% 降至 35-50%
+
+  return {
+    x: (Math.random() - 0.5) * initialXRange, 
+    y: (Math.random() - 0.5) * initialYRange, 
+    z: z, 
+    color: `hsl(${hueBase + hueVariation}, ${saturation}%, ${lightness}%)`,
+    prevX: null,
+    prevY: null
+  };
+}
+
+// 关键调整：减少星星数量，使其更分散稀疏
+function initStars(count = 300) { // ✨ 星星数量
+    stars = [];
+    for (let i = 0; i < count; i++) {
+        stars.push(createStar());
+    }
+}
+initStars(); 
+
+const galaxyClouds = [];
+function initGalaxyClouds(count = 5) {
+  for (let i = 0; i < count; i++) {
+    galaxyClouds.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      radius: Math.random() * Math.max(w, h) * 0.5 + Math.max(w, h) * 0.3,
+      color: `hsl(${Math.random() * 360}, 10%, 8%)`,
+      speedX: (Math.random() - 0.5) * 0.2,
+      speedY: (Math.random() - 0.5) * 0.2,
+      rotationSpeed: (Math.random() - 0.5) * 0.0001,
+      initialAngle: Math.random() * Math.PI * 2
+    });
+  }
+}
+initGalaxyClouds();
+
+function animate() {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.08)"; 
+  ctx.fillRect(0, 0, w, h);
+
+  const mainGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 1.2);
+  const time = Date.now() * 0.0001;
+  mainGrad.addColorStop(0, `hsl(${(time * 200) % 360},10%,1%)`); 
+  mainGrad.addColorStop(1, `hsl(${(time * 200 + 120) % 360},10%,2%)`); 
+  ctx.fillStyle = mainGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  galaxyClouds.forEach(cloud => {
+    const cloudGrad = ctx.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.radius);
+    cloudGrad.addColorStop(0, `${cloud.color.substring(0, cloud.color.length - 1)}, 0.005)`);
+    cloudGrad.addColorStop(1, `${cloud.color.substring(0, cloud.color.length - 1)}, 0)`);
+
+    ctx.fillStyle = cloudGrad;
+    ctx.beginPath();
+    cloud.x += cloud.speedX;
+    cloud.y += cloud.speedY;
+    cloud.radius += Math.sin(time * 5 + cloud.initialAngle) * 0.1;
+
+    if (cloud.x < -cloud.radius || cloud.x > w + cloud.radius) cloud.speedX *= -1;
+    if (cloud.y < -cloud.radius || cloud.y > h + cloud.radius) cloud.speedY *= -1;
+
+    ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const cameraZ = w * 0.8; 
+
+  for (let i = 0; i < stars.length; i++) {
+    let s = stars[i];
+    s.z += 0.8; // ✨ 速度从 2 降至 0.8
+
+    if (s.z > cameraZ * 1.2) { 
+      stars[i] = createStar(); 
+      s = stars[i]; 
+    }
+
+    let k = cameraZ / s.z; 
+    let px = s.x * k + w / 2;
+    let py = s.y * k + h / 2;
+
+    // 关键调整：减小星星基础尺寸和最小尺寸
+    let baseSize = (k * 1) + 0.3; // ✨ 尺寸乘数从 2 降至 1，加上 0.3 (原 0.5)
+    if (baseSize < 0.3) baseSize = 0.3; // ✨ 最小尺寸调整
+    let size = baseSize;
+
+    const padding = 50; 
+    if (px < -padding || px > w + padding || py < -padding || py > h + padding) {
+      s.prevX = px;
+      s.prevY = py;
+      continue; 
+    }
+
+    // 关键调整：减小星星发光模糊
+    ctx.shadowBlur = size * 0.8; // ✨ 模糊强度从 1.5 降至 0.8
+    ctx.shadowColor = s.color; 
+    ctx.fillStyle = s.color;
+
+    ctx.beginPath();
+    ctx.arc(px, py, size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "rgba(0,0,0,0)";
+
+    if (s.prevX !== null && s.prevY !== null) {
+      ctx.save(); 
+      ctx.globalAlpha = 0.2; // ✨ 拖影整体透明度从 0.4 降至 0.2
+      
+      // 关键调整：减少拖影段数，并进一步降低每段透明度
+      for (let j = 0; j < 2; j++) { // ✨ 拖影段数从 3 降至 2
+        const alpha = 0.1 - j * 0.05; // ✨ 拖影每段透明度从 0.2 开始降至 0.1
+        const tailX = px + (s.prevX - px) * (j + 1) * 0.2;
+        const tailY = py + (s.prevY - py) * (j + 1) * 0.2;
+        const tailSize = baseSize * (1 - j * 0.2);
+        
+        const hslMatch = s.color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+        if (hslMatch) {
+            const h = hslMatch[1];
+            const sVal = hslMatch[2];
+            const l = hslMatch[3];
+            ctx.fillStyle = `hsla(${h}, ${sVal}%, ${l}%, ${alpha})`;
+        } else {
+            ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        }
+        ctx.beginPath();
+        ctx.arc(tailX, tailY, tailSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore(); 
+    }
+
+    s.prevX = px;
+    s.prevY = py;
+  }
+  requestAnimationFrame(animate); 
+}
+animate();
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupKaTeX();
+            setupThemeToggle();
+            setupTOC();
+            setupCalculator();
+            setupRevealElements();
+        });
+
+        // === 函数定义 ===
+        function setupKaTeX() {
+            renderMathInElement(document.body, { 
+                delimiters: [
+                    {left: '$$', right: '$$', display: true}, 
+                    {left: '$', right: '$', display: false}
+                ], 
+                throwOnError: false,
+                ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+            });
+        }
+
+        function setupThemeToggle() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const htmlEl = document.documentElement;
+            themeToggle.addEventListener('click', () => {
+                htmlEl.classList.toggle('light-mode');
+                localStorage.setItem('theme', htmlEl.classList.contains('light-mode') ? 'light' : 'dark');
+            });
+        }
+
+        function setupTOC() {
+            const tocList = document.getElementById('toc-list');
+            const mainContent = document.querySelector('main');
+            if (!tocList || !mainContent) return;
+
+            tocList.innerHTML = '';
+            
+            const headings = mainContent.querySelectorAll('h3[id], h4[id]');
+            const tocLinks = [];
+
+            let lastH3ListItem = null;
+            let subList = null;
+
+            headings.forEach(heading => {
+                const id = heading.id;
+                const level = heading.tagName;
+                const text = heading.dataset.tocTitle || heading.textContent.trim();
+                let targetId = id;
+
+                if (!heading.id.endsWith("-title")) {
+                    targetId = `${id}-title`;
+                    heading.id = targetId;
+                }
+                
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = `#${targetId}`;
+                link.textContent = text;
+                link.className = 'toc-link';
+                
+                listItem.appendChild(link);
+                tocLinks.push(link);
+
+                if (level === 'H3') {
+                    tocList.appendChild(listItem);
+                    lastH3ListItem = listItem;
+                    subList = null;
+                } else if (level === 'H4' && lastH3ListItem) {
+                    if (!subList) {
+                        subList = document.createElement('ul');
+                        lastH3ListItem.appendChild(subList);
+                    }
+                    subList.appendChild(listItem);
+                }
+            });
+            
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    const targetHeadingId = entry.target.getAttribute('id');
+                    const activeLink = document.querySelector(`.toc-link[href="#${targetHeadingId}"]`);
+
+                    if (activeLink) {
+                        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+                            tocLinks.forEach(l => l.classList.remove('active'));
+                            activeLink.classList.add('active');
+                        } else if (!entry.isIntersecting && entry.boundingClientRect.top > 0) {
+                            activeLink.classList.remove('active');
+                        }
+                    }
+                });
+            }, { rootMargin: "0px 0px -40% 0px", threshold: [0.1, 0.6, 0.9]});
+
+            document.querySelectorAll('main h3[id], main h4[id]').forEach(heading => {
+                observer.observe(heading);
+            });
+        }
+
+        function setupCalculator() {
+            const k_input = document.getElementById('input-stiffness');
+            const c_input = document.getElementById('input-damping');
+            const accel_input = document.getElementById('input-accel');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const resultDiv = document.getElementById('analysis-result');
+
+            calculateBtn.addEventListener('click', () => {
+                const k = parseFloat(k_input.value);
+                const c = parseFloat(c_input.value);
+                const accel = parseFloat(accel_input.value);
+
+                if (isNaN(k) || isNaN(c) || isNaN(accel) || k <= 0) {
+                    resultDiv.innerHTML = `<p class="warn">请输入有效的正数参数值！</p>`;
+                    return;
+                }
+
+                const c_crit = 2 * Math.sqrt(k);
+                const zeta = c / c_crit;
+
+                let analysisHTML = '<h4>分析结果</h4><ul>';
+
+                if (accel < 100000) {
+                    analysisHTML += `<li><span class="warn">加速度警告:</span> 你的值 (${accel.toFixed(1)}) 可能会限制瞄准性能，建议设为 <code>200000.0</code> 或更高。</li>`;
+                } else {
+                    analysisHTML += `<li><span class="ok">加速度:</span> 充足，未成为性能瓶颈。</li>`;
+                }
+                
+                if (accel % 1 === 0) {
+                    analysisHTML += `<li><span class="warn">【注意】</span> 为避免潜在BUG，建议赋值为浮点数，例如 <code>${accel}.0</code> 而非 <code>${accel}</code>。</li>`;
+                }
+
+                analysisHTML += `<li><strong>临界阻尼 ($c_{crit}$):</strong> <code>${c_crit.toFixed(2)}</code> (当前刚度下的“完美刹车”值)</li>`;
+                analysisHTML += `<li><strong>你的阻尼比 ($\zeta$):</strong> <code>${zeta.toFixed(3)}</code> (决定瞄准风格的关键)</li>`;
+                
+                let styleDiagnosis = '';
+                if (zeta < 0.98) {
+                    styleDiagnosis = `<strong style="color: #f87171">欠阻尼 (Underdamped)</strong>: 瞄准启动迅速，到达目标时会产生一次<strong>过冲(Overshoot)</strong>，模拟了人类快速甩枪后的微小修正。风格极具侵略性，但可能牺牲稳定性。`;
+                } else if (zeta > 1.02) {
+                    styleDiagnosis = `<strong style="color: #60a5fa">过阻尼 (Overdamped)</strong>: 瞄准过程极为平滑，准星会“缓慢”地滑向目标，<strong>绝无过冲</strong>。提供了如磁铁般的“黏滞感”，适合稳定跟枪和架点，但牺牲了极限速度。`;
+                } else {
+                    styleDiagnosis = `<strong style="color: #34d399">临界阻尼 (Critically Damped)</strong>: 理论上的完美形态！以<strong>最快速度</strong>到达目标且<strong>没有任何过冲</strong>。这是机器人般精准、高效的瞄准方式。`;
+                }
+                analysisHTML += `<li><strong>风格诊断:</strong> ${styleDiagnosis}</li>`;
+                
+                analysisHTML += '</ul>';
+                resultDiv.innerHTML = analysisHTML;
+
+                renderMathInElement(resultDiv, { delimiters: [{left: '$', right: '$', display: false}]});
+            });
+        }
+
+        function setupRevealElements() {
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        e.target.classList.add('show');
+                        io.unobserve(e.target);
+                    }
+                });
+            }, { threshold: 0.15 });
+
+            document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+        }
+    </script>
+</body>
+</html>
