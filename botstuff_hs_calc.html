@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爆头率和条件概率艺术</title>
+    <!-- MathJax for LaTeX rendering -->
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <script>
+      MathJax = {
+        tex: {
+          inlineMath: [['\\(', '\\)']],
+          displayMath: [['$$', '$$']]
+        }
+      };
+    </script>
+    <!-- Chart.js for plotting -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Morandi Color Palette */
+        :root {
+            --morandi-bg-light: #F8F8F4; /* Light off-white */
+            --morandi-text-dark: #5E5E5E; /* Soft dark grey */
+            --morandi-heading: #7A9E8F; /* Muted Green-Grey */
+            --morandi-element-bg: #EFF3F3; /* Light Blue-Grey */
+            --morandi-accent: #A0B09F; /* Slightly darker Muted Green-Grey */
+            --morandi-border: #D0D4D4; /* Light border grey */
+            --morandi-box-bg: #ECEFF1; /* Very light blue-grey for boxed formulas */
+            --morandi-link-hover: #628C8C; /* Deeper Green-Blue for hover */
+            --morandi-chart-ak: #B5C9A9; /* Light green for AK line */
+            --morandi-chart-m4: #A1B2D3; /* Light blue for M4 line */
+            --morandi-chart-custom: #D3A1B2; /* Muted pink for custom line */
+        }
+
+        body {
+            font-family: 'Arial', 'Helvetica Neue', Helvetica, sans-serif;
+            line-height: 1.8;
+            color: var(--morandi-text-dark);
+            background-color: var(--morandi-bg-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 900px;
+            background-color: #fff; /* White background for the main content area */
+            padding: 30px 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+            margin-bottom: 30px;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--morandi-heading);
+            font-weight: normal;
+            margin-top: 1.5em;
+            margin-bottom: 0.8em;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 1.8em; }
+        h3 { font-size: 1.4em; }
+        h4 { font-size: 1.2em; }
+        h5 { font-size: 1.1em; }
+
+        p {
+            margin-bottom: 1em;
+        }
+
+        ul, ol {
+            margin-bottom: 1em;
+            padding-left: 2em;
+        }
+        ul li {
+            margin-bottom: 0.5em;
+        }
+
+        strong {
+            color: var(--morandi-heading);
+        }
+
+        /* Styles for MathJax rendered blocks */
+        .MathJax_Display {
+            margin: 1.5em 0 !important;
+            padding: 15px;
+            background-color: var(--morandi-box-bg);
+            border-left: 4px solid var(--morandi-accent);
+            border-radius: 5px;
+            overflow-x: auto; /* For long formulas */
+            color: var(--morandi-text-dark) !important; /* Ensure formula text color is consistent */
+        }
+
+        /* Chart Container Styling */
+        .chart-container {
+            margin-top: 30px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: var(--morandi-element-bg);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); /* Slightly more prominent shadow */
+            max-width: 900px; /* Match container width */
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chart-container h3 {
+            color: var(--morandi-heading);
+            margin-top: 0;
+            margin-bottom: 1em;
+        }
+        canvas {
+            max-width: 100%; /* Ensure canvas does not exceed its container */
+            height: auto; /* Maintain aspect ratio based on width */
+        }
+
+
+        /* Interactive Module Styling */
+        .interactive-module {
+            background-color: var(--morandi-element-bg);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); /* Slightly more prominent shadow */
+            max-width: 900px;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            border: 1px solid var(--morandi-border);
+        }
+
+        .interactive-module h3 {
+            color: var(--morandi-heading);
+            margin-top: 0;
+            margin-bottom: 1em;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            justify-content: center;
+            align-items: center;
+            gap: 15px; /* Space between inputs */
+        }
+
+        .input-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex-grow: 1;
+            min-width: 150px; /* Minimum width for input fields */
+        }
+
+        .input-group label {
+            margin-bottom: 5px;
+            color: var(--morandi-text-dark);
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .input-group input[type="number"],
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--morandi-border);
+            border-radius: 5px;
+            font-size: 1em;
+            color: var(--morandi-text-dark);
+            background-color: #fff;
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        .input-group input[type="number"]:focus,
+        .input-group select:focus {
+            border-color: var(--morandi-accent);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(160, 176, 159, 0.3);
+        }
+
+        button {
+            background-color: var(--morandi-accent);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: var(--morandi-link-hover);
+        }
+
+        #result {
+            margin-top: 25px;
+            font-size: 1.2em;
+            color: var(--morandi-heading);
+            font-weight: bold;
+            min-height: 2em; /* Ensure some height even if empty */
+        }
+
+        .author-info {
+            text-align: center;
+            margin-top: 20px;
+            font-style: italic;
+            color: #777;
+            font-size: 0.9em;
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--morandi-text-dark);
+            font-size: 1.2em;
+            margin-bottom: 2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>爆头率和条件概率艺术</h1>
+        <p class="subtitle">趣味的CS统计学</p>
+
+        <div class="argument-module">
+            <h2 style="font-size: 1.8em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">客观严谨的爆头击杀概率论证</h2>
+
+            <h3 style="font-size: 1.4em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">1. 假设与定义</h3>
+            <p>我们首先明确问题中的各项设定：</p>
+            <ul style="list-style-type: disc; margin-left: 2em;">
+                <li>玩家初始生命值 (HP): \(L = 100\)</li>
+                <li><strong>武器 AK:</strong>
+                    <ul style="list-style-type: circle; margin-left: 2em;">
+                        <li>AK 爆头伤害 (\(D_{AK,H}\)): \(100\)</li>
+                        <li>AK 身体伤害 (\(D_{AK,B}\)): \(27\)</li>
+                    </ul>
+                </li>
+                <li><strong>武器 M4:</strong>
+                    <ul style="list-style-type: circle; margin-left: 2em;">
+                        <li>M4 爆头伤害 (\(D_{M4,H}\)): \(89\)</li>
+                        <li>M4 身体伤害 (\(D_{M4,B}\)): \(24\)</li>
+                    </ul>
+                </li>
+                <li><strong>单发子弹击中头部的概率:</strong> \(P\)</li>
+                <li><strong>单发子弹击中身体的概率:</strong> \(1-P\)</li>
+                <li><strong>爆头击杀结算规则:</strong> 只考虑造成玩家死亡 (血量 \(\le 0\)) 的最后一次击中的部位。如果最后一次击中是头部，则判定为爆头击杀。</li>
+            </ul>
+            <p>我们的目标是计算大规模交战中观测到的爆头造成死亡的概率 \(P_{HS,obs}\)。</p>
+
+            <h3 style="font-size: 1.4em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">2. 核心分析方法</h3>
+            <p>为了计算观测到的爆头击杀概率 \(P_{HS,obs}\)，我们需要考虑所有导致击杀的事件，并区分其最后一击的部位。</p>
+            <p>设 \(E_{Kill}\) 为发生击杀的事件。</p>
+            <p>设 \(E_{LastHead}\) 为导致击杀的最后一击是头部的事件。</p>
+            <p>设 \(E_{LastBody}\) 为导致击杀的最后一击是身体的事件。</p>
+            <p>根据问题定义，观测到的爆头击杀概率为：</p>
+            $$P_{HS,obs} = P(E_{LastHead} | E_{Kill}) = \frac{P(E_{LastHead} \cap E_{Kill})}{P(E_{Kill})}$$
+            <p>由于 \(E_{Kill} = E_{LastHead} \cup E_{LastBody}\) 且 \(E_{LastHead} \cap E_{LastBody} = \emptyset\) (最后一击要么是头要么是身体，不可能同时是两者)，因此 \(P(E_{Kill}) = P(E_{LastHead} \cap E_{Kill}) + P(E_{LastBody} \cap E_{Kill})\).</p>
+            <p>所以，</p>
+            $$P_{HS,obs} = \frac{P(E_{LastHead} \cap E_{Kill})}{P(E_{LastHead} \cap E_{Kill}) + P(E_{LastBody} \cap E_{Kill})}$$
+            <p>我们将分别对 AK 和 M4 进行分析，因为它们的伤害特性截然不同。</p>
+
+            <h3 style="font-size: 1.4em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">3. AK 武器的爆头击杀概率分析</h3>
+            <p><strong>AK 伤害特性:</strong> \(D_{AK,H} = 100\), \(D_{AK,B} = 27\)。玩家 HP \(L = 100\)。</p>
+
+            <h4 style="font-size: 1.2em; margin-top: 0.8em; margin-bottom: 0.4em; color: var(--morandi-text-dark);">3.1. 关键考量</h4>
+            <p>尽管 AK 头部伤害为 \(100\)，可以一击秒杀满血目标，但我们仍需按照"最后一击部位"来判定击杀类型。在大规模交战中，一个目标可能并非满血，或者被多次命中。</p>
+            <p>我们采用与 M4 相同的统计学近似：假设在任何单发子弹命中前的瞬间，目标剩余生命值 \(HP_{rem}\) 在 \((0, L]\) 范围内是均匀分布的。</p>
+
+            <h4 style="font-size: 1.2em; margin-top: 0.8em; margin-bottom: 0.4em; color: var(--morandi-text-dark);">3.2. 爆头作为最后一击并导致击杀 (\(E_{LastHead} \cap E_{Kill}\)):</h4>
+            <ul style="list-style-type: disc; margin-left: 2em;">
+                <li>发生概率：该子弹命中头部，概率为 \(P\)。</li>
+                <li>击杀条件：在这一击命中前，目标的剩余生命值 \(HP_{rem}\) 必须在 \((0, D_{AK,H}]\) 范围内，即 \((0, 100]\)。</li>
+                <li>在剩余生命值均匀分布的假设下，一发爆头"能击杀"的条件概率为 \(\frac{D_{AK,H}}{L} = \frac{100}{100} = 1\)。</li>
+            </ul>
+            <p>因此, 一发子弹命中头部并导致击杀的复合概率为：</p>
+            $$ P(E_{LastHead} \cap E_{Kill}) = P \times \frac{100}{100} = P $$
+
+            <h4 style="font-size: 1.2em; margin-top: 0.8em; margin-bottom: 0.4em; color: var(--morandi-text-dark);">3.3. 身体命中作为最后一击并导致击杀 (\(E_{LastBody} \cap E_{Kill}\)):</h4>
+            <ul style="list-style-type: disc; margin-left: 2em;">
+                <li>发生概率：该子弹命中身体，概率为 \(1-P\)。</li>
+                <li>击杀条件：在这一击命中前，目标的剩余生命值 \(HP_{rem}\) 必须在 \((0, D_{AK,B}]\) 范围内，即 \((0, 27]\)。</li>
+                <li>在剩余生命值均匀分布的假设下，一发身体"能击杀"的条件概率为 \(\frac{D_{AK,B}}{L} = \frac{27}{100}\)。</li>
+            </ul>
+            <p>因此，一发子弹命中身体并导致击杀的复合概率为：</p>
+            $$ P(E_{LastBody} \cap E_{Kill}) = (1-P) \times \frac{27}{100} $$
+
+            <h4 style="font-size: 1.2em; margin-top: 0.8em; margin-bottom: 0.4em; color: var(--morandi-text-dark);">3.4. AK 观察到的爆头击杀概率</h4>
+            <p>将上述概率代入总公式：</p>
+            $$P_{HS,obs}^{AK} = \frac{P}{P + (1-P) \times \frac{27}{100}}$$
+            <p>分子分母同乘以 \(100\):</p>
+            $$P_{HS,obs}^{AK} = \frac{100P}{100P + 27(1-P)}$$
+            $$P_{HS,obs}^{AK} = \frac{100P}{100P + 27 - 27P}$$
+            $$P_{HS,obs}^{AK} = \frac{100P}{73P + 27}$$
+            <p>这个公式考虑了所有可能的击杀路径，比之前的简化版本更为严谨和准确。</p>
+
+            <h3 style="font-size: 1.4em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">4. M4 武器的爆头击杀概率分析 (保持不变)</h3>
+            <p><strong>M4 伤害特性:</strong> \(D_{M4,H} = 89\), \(D_{M4,B} = 24\)。玩家 HP \(L = 100\)。</p>
+
+            <h4 style="font-size: 1.2em; margin-top: 0.8em; margin-bottom: 0.4em; color: var(--morandi-text-dark);">4.1. 关键差异</h4>
+            <p>M4 的爆头伤害为 \(89\)，不足以一击击杀满血目标。这意味着：</p>
+            <ul style="list-style-type: disc; margin-left: 2em;">
+                <li>M4 不存在一击爆头击杀。</li>
+                <li>M4 的每一次命中，无论是头部还是身体，都可能不是导致最终死亡的"最后一击"。</li>
+            </ul>
+            <p>因此，我们需要更细致地考虑"导致死亡的最后一击"的概率。</p>
+
+            <h4 style="font-size: 1.2em; margin-top: 0.8em; margin-bottom: 0.4em; color: var(--morandi-text-dark);">4.2. 最后一击的判定与子弹效能</h4>
+            <p>我们假设在一次击杀过程中，攻击者持续用 M4 射击目标。在大规模交战中，受伤目标可能处于各种血量状态。</p>
+            <p>为了简化，我们采用一种适用于大规模交战的统计学近似方法：假设在任何单发子弹命中前的瞬间，目标剩余生命值 \(HP_{rem}\) 在 \((0, L]\) 范围内是均匀分布的（这是一种工程近似，用于平均化复杂的击杀路径）。</p>
+
+            <p>现在我们考虑在一次射击中，如何判定其是否是导致击杀的"最后一击"，以及其部位。</p>
+
+            <h5 style="font-size: 1.1em; margin-top: 0.6em; margin-bottom: 0.3em; color: var(--morandi-text-dark);">M4 爆头作为最后一击并导致击杀 (\(E_{LastHead} \cap E_{Kill}\)):</h5>
+            <ul style="list-style-type: disc; margin-left: 2em;">
+                <li>发生概率：该子弹命中头部，概率为 \(P\)。</li>
+                <li>击杀条件：在这一击命中前，目标的剩余生命值 \(HP_{rem}\) 必须在 \((0, D_{M4,H}]\) 范围内，即 \((0, 89]\)。只有当 \(HP_{rem} \le 89\) 时，这一击爆头才能导致死亡。</li>
+                <li>在剩余生命值均匀分布的假设下，一发爆头"能击杀"的条件概率为 \(\frac{D_{M4,H}}{L} = \frac{89}{100}\)。</li>
+            </ul>
+            <p>因此，一发子弹命中头部并导致击杀的复合概率为：</p>
+            $$ P(E_{LastHead} \cap E_{Kill}) = P \times \frac{D_{M4,H}}{L} = P \times \frac{89}{100} $$
+
+            <h5 style="font-size: 1.1em; margin-top: 0.6em; margin-bottom: 0.3em; color: var(--morandi-text-dark);">M4 身体命中作为最后一击并导致击杀 (\(E_{LastBody} \cap E_{Kill}\)):</h5>
+            <ul style="list-style-type: disc; margin-left: 2em;">
+                <li>发生概率：该子弹命中身体，概率为 \(1-P\)。</li>
+                <li>击杀条件：在这一击命中前，目标的剩余生命值 \(HP_{rem}\) 必须在 \((0, D_{M4,B}]\) 范围内，即 \((0, 24]\)。只有当 \(HP_{rem} \le 24\) 时，这一击身体命中才能导致死亡。</li>
+                <li>在剩余生命值均匀分布的假设下，一发身体"能击杀"的条件概率为 \(\frac{D_{M4,B}}{L} = \frac{24}{100}\)。</li>
+            </ul>
+            <p>因此，一发子弹命中身体并导致击杀的复合概率为：</p>
+            $$ P(E_{LastBody} \cap E_{Kill}) = (1-P) \times \frac{D_{M4,B}}{L} = (1-P) \times \frac{24}{100} $$
+
+            <h4 style="font-size: 1.2em; margin-top: 0.8em; margin-bottom: 0.4em; color: var(--morandi-text-dark);">4.3. M4 观察到的爆头击杀概率</h4>
+            <p>将上述概率代入总公式：</p>
+            $$P_{HS,obs}^{M4} = \frac{P(E_{LastHead} \cap E_{Kill})}{P(E_{LastHead} \cap E_{Kill}) + P(E_{LastBody} \cap E_{Kill})}$$
+            $$P_{HS,obs}^{M4} = \frac{P \times \frac{89}{100}}{P \times \frac{89}{100} + (1-P) \times \frac{24}{100}}$$
+            <p>分子分母同乘以 \(100\):</p>
+            $$P_{HS,obs}^{M4} = \frac{89P}{89P + 24(1-P)}$$
+            $$P_{HS,obs}^{M4} = \frac{89P}{89P + 24 - 24P}$$
+            $$P_{HS,obs}^{M4} = \frac{89P}{65P + 24}$$
+
+            <h3 style="font-size: 1.4em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">5. 结论</h3>
+            <p>我们将分别给出在仅使用 AK 或仅使用 M4 两种情况下的观察爆头击杀概率。如果在"大规模交战"中包含了两种武器，则需要引入两种武器在该交战中的击杀权重。</p>
+
+            <ol style="list-style-type: decimal; margin-left: 2em;">
+                <li><strong>当击杀全部由 AK 完成时：</strong>
+                <p>我们将 AK 的伤害值 \(D_{AK,H}=100\) 和 \(D_{AK,B}=27\) 代入通用公式，得到：</p>
+                <div class="MathJax_Display" style="background-color: var(--morandi-box-bg); border-left: 4px solid var(--morandi-accent); padding: 10px; margin: 1em 0;">
+                    $$\boxed{P_{HS,obs}^{AK} = \frac{100P}{73P + 27}}$$
+                </div>
+                </li>
+
+                <li><strong>当击杀全部由 M4 完成时：</strong>
+                <p>M4 爆头并不能一击击杀满血目标。我们基于"最后一击决定击杀类型"的规则，并假设在击杀前的瞬间目标剩余生命值在 \((0, L]\) 范围内均匀分布。</p>
+                <p>因此，观察到的爆头击杀概率 \(P_{HS,obs}^{M4}\) 为：</p>
+                <div class="MathJax_Display" style="background-color: var(--morandi-box-bg); border-left: 4px solid var(--morandi-accent); padding: 10px; margin: 1em 0;">
+                    $$\boxed{P_{HS,obs}^{M4} = \frac{89P}{65P + 24}}$$
+                </div>
+                </li>
+
+                <li><strong>当"大规模交战"同时涉及 AK 和 M4 时：</strong>
+                <p>若假设 AK 造成的击杀占总击杀的比例为 \(W_{AK}\)，M4 占 \(W_{M4}\) (\(W_{AK} + W_{M4} = 1\))，则总体的观察爆头击杀概率 \(P_{HS,obs}^{Total}\) 为：</p>
+                $$P_{HS,obs}^{Total} = W_{AK} \cdot P_{HS,obs}^{AK} + W_{M4} \cdot P_{HS,obs}^{M4}$$
+                <div class="MathJax_Display" style="background-color: var(--morandi-box-bg); border-left: 4px solid var(--morandi-accent); padding: 10px; margin: 1em 0;">
+                    $$\boxed{P_{HS,obs}^{Total} = W_{AK} \cdot \left( \frac{100P}{73P + 27} \right) + W_{M4} \cdot \left( \frac{89P}{65P + 24} \right)}$$
+                </div>
+                <p>在没有给定 \(W_{AK}\) 和 \(W_{M4}\) 的情况下，上述两种武器的单独计算结果即为对问题的完整解答。</p>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Interactive Module -->
+    <div class="interactive-module">
+        <h3>爆头率计算器</h3>
+        <div class="input-group">
+            <div class="input-item">
+                <label for="calcWeapon">选择武器类型 (影响计算逻辑):</label>
+                <select id="calcWeapon" onchange="updateDamageDefaults(); createOrUpdateChart();">
+                    <option value="AK">AK</option>
+                    <option value="M4">M4</option>
+                    <option value="Custom">自定义</option>
+                </select>
+            </div>
+            <div class="input-item">
+                <label for="headDamage">爆头伤害 (D_H):</label>
+                <input type="number" id="headDamage" value="100" step="any" required oninput="createOrUpdateChart()">
+            </div>
+            <div class="input-item">
+                <label for="bodyDamage">身体伤害 (D_B):</label>
+                <input type="number" id="bodyDamage" value="27" step="any" required oninput="createOrUpdateChart()">
+            </div>
+            <div class="input-item">
+                <label for="hitProbability">单次打头概率 (P, 0-1):</label>
+                <input type="number" id="hitProbability" value="0.3" min="0" max="1" step="0.01">
+            </div>
+            <div class="input-item">
+                <label for="observedHsRate">观测爆头击杀率 (P_HS_obs, 0-1):</label>
+                <input type="number" id="observedHsRate" value="" min="0" max="1" step="0.01" disabled>
+            </div>
+        </div>
+        <button onclick="calculate()">计算</button>
+        <div id="result"></div>
+    </div>
+
+    <div class="author-info">
+        <p>作者：un1 powered by Gemini</p>
+    </div>
+
+    <script>
+        const HP_MAX = 100; // Total Health Points
+
+        let chartInstance = null; // To hold the Chart.js instance
+
+        // Function to create/update chart
+        function createOrUpdateChart() {
+            const ctx = document.getElementById('headshotRateChart').getContext('2d');
+            
+            // Generate data points for P values from 0 to 1
+            const P_values = [];
+            const AK_HS_rates = [];
+            const M4_HS_rates = [];
+            const Custom_HS_rates = [];
+
+            // Get custom damage values
+            const customHeadDamage = parseFloat(document.getElementById('headDamage').value) || 100;
+            const customBodyDamage = parseFloat(document.getElementById('bodyDamage').value) || 27;
+
+            for (let i = 0; i <= 100; i++) { // Generate 101 data points for smoothness
+                const p_val = i / 100;
+                P_values.push(p_val);
+
+                // AK formula: (100 * P) / (73 * P + 27)
+                const ak_numerator = 100 * p_val;
+                const ak_denominator = 73 * p_val + 27;
+                AK_HS_rates.push(ak_denominator === 0 ? 0 : ak_numerator / ak_denominator);
+
+                // M4 formula: (89 * P) / (65 * P + 24)
+                const m4_numerator = 89 * p_val;
+                const m4_denominator = 65 * p_val + 24;
+                M4_HS_rates.push(m4_denominator === 0 ? 0 : m4_numerator / m4_denominator);
+
+                // Custom formula: (DH * P) / ((DH - DB) * P + DB)
+                const custom_numerator = customHeadDamage * p_val;
+                const custom_denominator = (customHeadDamage - customBodyDamage) * p_val + customBodyDamage;
+                if (custom_denominator > 0 && customHeadDamage > 0 && customBodyDamage > 0 && customHeadDamage >= customBodyDamage) {
+                    Custom_HS_rates.push(custom_numerator / custom_denominator);
+                } else {
+                    Custom_HS_rates.push(null);
+                }
+            }
+
+            const datasets = [
+                {
+                    label: 'AK 实际爆头击杀率 (P_HS_obs)',
+                    data: AK_HS_rates,
+                    borderColor: '#B5C9A9', // Light green for AK line
+                    backgroundColor: 'transparent',
+                    tension: 0.1,
+                    pointRadius: 0,
+                    borderWidth: 2
+                },
+                {
+                    label: 'M4 实际爆头击杀率 (P_HS_obs)',
+                    data: M4_HS_rates,
+                    borderColor: '#A1B2D3', // Light blue for M4 line
+                    backgroundColor: 'transparent',
+                    tension: 0.1,
+                    pointRadius: 0,
+                    borderWidth: 2
+                },
+                {
+                    label: `自定义武器 (D_H=${customHeadDamage}, D_B=${customBodyDamage})`,
+                    data: Custom_HS_rates,
+                    borderColor: '#D3A1B2', // Muted pink for custom line
+                    backgroundColor: 'transparent',
+                    tension: 0.1,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                    spanGaps: false // Don't connect null values
+                }
+            ];
+
+            const data = {
+                labels: P_values,
+                datasets: datasets
+            };
+
+            const options = {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: '单次打头概率 P',
+                            color: '#5E5E5E'
+                        },
+                        min: 0,
+                        max: 1,
+                        ticks: {
+                            callback: function(value) {
+                                return (value * 100).toFixed(0) + '%';
+                            },
+                            color: '#5E5E5E'
+                        },
+                        grid: {
+                            color: '#D0D4D4'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '实际观察到的爆头击杀率 P_HS_obs',
+                            color: '#5E5E5E'
+                        },
+                        min: 0,
+                        max: 1,
+                        ticks: {
+                            callback: function(value) {
+                                return (value * 100).toFixed(0) + '%';
+                            },
+                            color: '#5E5E5E'
+                        },
+                        grid: {
+                            color: '#D0D4D4'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#5E5E5E'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                // Check if the value is null before trying to format
+                                if (context.parsed.y === null) {
+                                    return label + 'N/A';
+                                }
+                                label += (context.parsed.y * 100).toFixed(2) + '%';
+                                return label;
+                            },
+                            title: function(context) {
+                                if (context && context.length > 0 && context[0].parsed.x !== null) {
+                                    return 'P: ' + (context[0].parsed.x * 100).toFixed(2) + '%';
+                                }
+                                return 'P: N/A';
+                            }
+                        }
+                    }
+                }
+            };
+
+            if (chartInstance) {
+                chartInstance.destroy(); // Destroy existing chart before creating a new one
+            }
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: options
+            });
+        }
+
+        // --- Interactive Module Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+             updateDamageDefaults(); // Set initial damage values based on AK
+             updateInputs(); // Set initial input states
+             createOrUpdateChart(); // Draw the chart on page load
+        });
+
+        // Updates default damage values based on selected weapon
+        function updateDamageDefaults() {
+            const calcWeapon = document.getElementById('calcWeapon').value;
+            const headDamageInput = document.getElementById('headDamage');
+            const bodyDamageInput = document.getElementById('bodyDamage');
+
+            if (calcWeapon === 'AK') {
+                headDamageInput.value = 100;
+                bodyDamageInput.value = 27;
+                headDamageInput.disabled = true;
+                bodyDamageInput.disabled = true;
+            } else if (calcWeapon === 'M4') {
+                headDamageInput.value = 89;
+                bodyDamageInput.value = 24;
+                headDamageInput.disabled = true;
+                bodyDamageInput.disabled = true;
+            } else { // Custom
+                headDamageInput.disabled = false;
+                bodyDamageInput.disabled = false;
+                // Only clear default values if they match AK/M4 defaults and switching to custom
+                if ( (headDamageInput.value === '100' && bodyDamageInput.value === '27') ||
+                     (headDamageInput.value === '89' && bodyDamageInput.value === '24') ) {
+                    headDamageInput.value = ''; // Clear for user input
+                    bodyDamageInput.value = ''; // Clear for user input
+                }
+            }
+            document.getElementById('result').innerHTML = ''; // Clear result if weapon changes
+        }
+
+        // Toggles input fields based on calculation mode
+        function updateInputs() {
+            const calcMode = document.getElementById('calcMode').value;
+            const hitProbInput = document.getElementById('hitProbability');
+            const obsHsRateInput = document.getElementById('observedHsRate');
+
+            if (calcMode === 'calculate_hs_rate') {
+                hitProbInput.disabled = false;
+                obsHsRateInput.disabled = true;
+                obsHsRateInput.value = ''; // Clear disabled field
+                hitProbInput.value = hitProbInput.value || '0.3'; // Set default if empty
+            } else {
+                hitProbInput.disabled = true;
+                obsHsRateInput.disabled = false;
+                hitProbInput.value = ''; // Clear disabled field
+                obsHsRateInput.value = obsHsRateInput.value || '0.5'; // Set default if empty
+            }
+            document.getElementById('result').innerHTML = ''; // Clear result when mode changes
+        }
+
+        // Main calculation function
+        function calculate() {
+            const headDamage = parseFloat(document.getElementById('headDamage').value);
+            const bodyDamage = parseFloat(document.getElementById('bodyDamage').value);
+            const calcMode = document.getElementById('calcMode').value;
+            const resultDiv = document.getElementById('result');
+            const calcWeapon = document.getElementById('calcWeapon').value;
+
+            resultDiv.innerHTML = ''; // Clear previous result
+
+            // Common input validations
+            if (isNaN(headDamage) || isNaN(bodyDamage)) {
+                resultDiv.innerHTML = '<span style="color: red;">伤害值必须为数字。</span>';
+                return;
+            }
+            if (headDamage <= 0 || bodyDamage <= 0) {
+                resultDiv.innerHTML = '<span style="color: red;">伤害值必须大于零。</span>';
+                return;
+            }
+            if (headDamage < bodyDamage) {
+                 resultDiv.innerHTML = '<span style="color: red;">爆头伤害不能低于身体伤害。</span>';
+                 return;
+            }
+
+            if (calcMode === 'calculate_hs_rate') {
+                let hitProb = parseFloat(document.getElementById('hitProbability').value);
+                if (isNaN(hitProb) || hitProb < 0 || hitProb > 1) {
+                    resultDiv.innerHTML = '<span style="color: red;">单次打头概率P应在0到1之间。</span>';
+                    return;
+                }
+                
+                let actualHeadDamage = headDamage;
+                let actualBodyDamage = bodyDamage;
+
+                // Adjust to default AK/M4 values if selected, ensuring consistency with chart
+                if (calcWeapon === 'AK') {
+                    actualHeadDamage = 100;
+                    actualBodyDamage = 27;
+                } else if (calcWeapon === 'M4') {
+                    actualHeadDamage = 89;
+                    actualBodyDamage = 24;
+                }
+                
+                const numerator = actualHeadDamage * hitProb;
+                const denominator = (actualHeadDamage - actualBodyDamage) * hitProb + actualBodyDamage;
+
+                if (denominator === 0) {
+                    resultDiv.innerHTML = '<span style="color: red;">分母为零，无法计算。这通常发生在P=0且身体伤害为0的情况下。</span>';
+                    return;
+                }
+
+                const observedHsRate = numerator / denominator;
+                resultDiv.innerHTML = `使用${calcWeapon} (爆头伤害 ${actualHeadDamage}, 身体伤害 ${actualBodyDamage})：<br>实际爆头击杀率 P_HS_obs ≈ <span style="font-size: 1.5em">${(observedHsRate * 100).toFixed(2)}%</span>`;
+
+            } else { // calculate_hit_prob
+                let obsHsRate = parseFloat(document.getElementById('observedHsRate').value);
+                if (isNaN(obsHsRate) || obsHsRate < 0 || obsHsRate > 1) {
+                    resultDiv.innerHTML = '<span style="color: red;">观测爆头击杀率 P_HS_obs 应在0到1之间。</span>';
+                    return;
+                }
+
+                let actualHeadDamage = headDamage;
+                let actualBodyDamage = bodyDamage;
+
+                // Adjust to default AK/M4 values if selected
+                if (calcWeapon === 'AK') {
+                    actualHeadDamage = 100;
+                    actualBodyDamage = 27;
+                } else if (calcWeapon === 'M4') {
+                    actualHeadDamage = 89;
+                    actualBodyDamage = 24;
+                }
+
+                // Solve P = (P_HS_obs * D_B) / (D_H * (1 - P_HS_obs) + P_HS_obs * D_B)
+                const numerator = obsHsRate * actualBodyDamage;
+                const denominator = actualHeadDamage * (1 - obsHsRate) + obsHsRate * actualBodyDamage;
+
+                if (denominator === 0) {
+                    resultDiv.innerHTML = '<span style="color: red;">分母为零，无法反算。这可能意味着在现有伤害设定下，无法达到目标观测爆头率。请检查伤害值或目标爆头率。</span>';
+                    return;
+                }
+                
+                const hitProb = numerator / denominator;
+
+                if (hitProb < 0 || hitProb > 1) {
+                     resultDiv.innerHTML = `<span style="color: red;">反算结果 P (${(hitProb * 100).toFixed(2)}%) 不在0到1之间，请检查输入参数是否合理。这可能意味着在现有伤害设定下，无法达到目标观测爆头率。</span>`;
+                    return;
+                }
+
+                resultDiv.innerHTML = `使用${calcWeapon} (爆头伤害 ${actualHeadDamage}, 身体伤害 ${actualBodyDamage})：<br>反算单次打头概率 P ≈ <span style="font-size: 1.5em">${(hitProb * 100).toFixed(2)}%</span>`;
+            }
+        }
+    </script>
+</body>
+</html>calcMode">选择计算模式:</label>
+                <select id="calcMode" onchange="updateInputs()">
+                    <option value="calculate_hs_rate">已知单次打头概率，计算爆头击杀率</option>
+                    <option value="calculate_hit_prob">已知爆头击杀率，反算单次打头概率</option>
+                </select>
+            </div>
+            <div class="input-item">
+                <label for="
