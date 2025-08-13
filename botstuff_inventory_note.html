@@ -4,85 +4,358 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOT 物品栏插件解析 - 为新玩家定制</title>
+    
+    <!-- highlight.js 样式文件 (用于代码高亮) -->
+    <!-- 默认（浅色）主题 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+    <!-- 深色模式主题，通过JS动态切换 -->
+    <link rel="stylesheet" id="highlight-dark-theme" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" disabled>
+
     <style>
-        /* 莫兰迪配色方案 */
+        /* 莫兰迪配色方案 - 浅色模式（默认）*/
+        :root {
+            --primary-text-color: #495057; /* 主要文本颜色 */
+            --background-color: #F0F2F5; /* 外部背景色 */
+            --container-bg: #FFFFFF; /* 内容容器背景色 */
+            --header-color: #6A8EAE; /* 标题颜色 */
+            --border-color: #CBD2D8; /* 分隔线和边框颜色 */
+            --link-color: #B29DA3; /* 普通链接颜色 */
+            --link-hover-color: #6A8EAE; /* 链接悬停颜色 */
+            --note-bg: #F6F9FC; /* 提示框背景 */
+            --note-border: #B29DA3; /* 提示框边框 */
+            --strong-color: #6A8EAE; /* 强调文字颜色 */
+            /* 代码块默认颜色将由 highlight.js 提供 */
+            --code-bg: #F8F8F8; /* 轻柔代码背景 (与 highlight.js 配套) */
+            --code-text: #495057; /* 代码文本 (基础) */
+            --code-border: #D0D7DE; /* 代码边框 */
+            --code-header-bg: #EAECEF; /* 代码块标题背景 */
+            --code-header-text: #495057; /* 代码块标题文本 */
+            --button-bg: #6A8EAE; /* 按钮背景 */
+            --button-text: white; /* 按钮文字 */
+
+            /* TOC (目录) 颜色 */
+            --toc-bg: #E7ECF0; /* 目录背景 */
+            --toc-border: #CBD2D8; /* 目录边框 */
+            --toc-link-color: #495057; /* 目录链接文本 */
+            --toc-link-hover-bg: #CCD2D8; /* 目录链接悬停背景 */
+            --toc-link-active-bg: #B0C4DE; /* 目录链接激活背景 */
+            --toc-link-active-border: #6A8EAE; /* 目录链接激活边框 */
+        }
+
+        /* 深色模式 */
+        .dark-mode {
+            --primary-text-color: #E2E2E2;
+            --background-color: #282C34;
+            --container-bg: #3C424E;
+            --header-color: #B4C6D4;
+            --border-color: #555B6E;
+            --link-color: #9C8998;
+            --link-hover-color: #B4C6D4;
+            --note-bg: #4A505D;
+            --note-border: #9C8998;
+            --strong-color: #B4C6D4;
+            /* 代码块深色模式颜色将由 highlight.js 提供 */
+            --code-bg: #2F323D; /* 深色代码背景 (与 highlight.js 配套) */
+            --code-text: #E0E0E0; /* 代码文本 (基础) */
+            --code-border: #5A606E; /* 代码边框 */
+            --code-header-bg: #4A505D;
+            --code-header-text: #E2E2E2;
+            --button-bg: #555B6E;
+            --button-text: #E2E2E2;
+
+            /* TOC (目录) 颜色 */
+            --toc-bg: #33363F;
+            --toc-border: #555B6E;
+            --toc-link-color: #E2E2E2;
+            --toc-link-hover-bg: #4A505D;
+            --toc-link-active-bg: #5A606E;
+            --toc-link-active-border: #B4C6D4;
+        }
+
         body {
             font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #495057; /* 深灰文本 */
-            background-color: #F0F2F5; /* 浅灰背景 */
-            margin: 20px;
-            padding: 0;
+            color: var(--primary-text-color);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 20px; /* 整体页面内边距 */
+            display: flex; /* 使用 Flexbox 布局 */
+            justify-content: center; /* 水平居中内容 */
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
+        .theme-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .theme-switch button {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .theme-switch button:hover {
+            opacity: 0.9;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 浮动目录 */
+        #toc {
+            position: fixed;
+            left: 20px;
+            top: 80px; /* 留出主题切换按钮的空间 */
+            width: 250px;
+            height: calc(100vh - 100px); /* 100px 是顶部和底部间距 */
+            background-color: var(--toc-bg);
+            border: 1px solid var(--toc-border);
+            border-radius: 8px;
+            padding: 20px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+            z-index: 500;
+            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #toc h3 {
+            text-align: center;
+            margin-top: 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--toc-border);
+            font-size: 1.2em;
+            color: var(--header-color);
+            margin-bottom: 15px;
+        }
+        #toc ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #toc ul li {
+            margin-bottom: 5px;
+        }
+        #toc ul li a {
+            display: block;
+            padding: 6px 10px;
+            text-decoration: none;
+            color: var(--toc-link-color);
+            border-left: 3px solid transparent;
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+            font-size: 0.95em;
+        }
+        #toc ul li a:hover {
+            background-color: var(--toc-link-hover-bg);
+        }
+        #toc ul li a.active {
+            background-color: var(--toc-link-active-bg);
+            border-left-color: var(--toc-link-active-border);
+            font-weight: bold;
+            color: var(--link-hover-color);
+        }
+        /* TOC 缩进层级 */
+        #toc ul ul {
+            padding-left: 15px;
+        }
+        #toc ul ul a {
+            font-size: 0.9em;
+        }
+        #toc ul ul ul {
+            padding-left: 15px;
+        }
+        #toc ul ul ul a {
+            font-size: 0.85em;
+        }
+        
         .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background-color: #FFFFFF; /* 内容区域白色背景 */
+            /* 调整内容区域以占据更多宽度，并居中 */
+            max-width: 1000px; /* 增加最大宽度 */
+            width: calc(100% - 300px); /* 减去TOC和其左侧间距 */
+            margin-left: 280px; /* 为TOC和其右侧留出空间 */
+            margin-right: 20px; /* 保持与右侧的距离 */
+            background-color: var(--container-bg);
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
         h1, h2, h3, h4 {
-            color: #6A8EAE; /* 标题采用柔和的蓝色 */
-            border-bottom: 1px solid #CBD2D8; /* 浅灰蓝色边框 */
+            color: var(--header-color);
+            border-bottom: 1px solid var(--border-color);
             padding-bottom: 10px;
             margin-top: 30px;
+            transition: color 0.3s ease, border-color 0.3s ease;
+            scroll-margin-top: 80px; /* 为了平滑滚动时标题不被顶部固定元素遮挡 */
         }
-        h1 { font-size: 2.2em; }
+        h1 { font-size: 2.2em; text-align: center; }
         h2 { font-size: 1.8em; }
         h3 { font-size: 1.5em; }
         h4 { font-size: 1.2em; }
         p {
             margin-bottom: 1em;
-        }
-        pre {
-            background-color: #E8F6F3; /* 柔和的浅绿色背景 */
-            color: #2A524A; /* 深绿色代码文本 */
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 0.9em;
-            margin-bottom: 1.5em;
-            border-left: 5px solid #A2B9BD; /* 增加一点边框颜色 */
-        }
-        code {
-            background-color: #E8F6F3;
-            color: #2A524A;
-            padding: 2px 4px;
-            border-radius: 3px;
-        }
-        strong {
-            color: #6A8EAE; /* 强调文字 */
-        }
-        .note {
-            background-color: #F6F9FC; /* 浅米色背景 */
-            border-left: 4px solid #B29DA3; /* 温柔的粉色边框 */
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
+            color: var(--primary-text-color);
+            transition: color 0.3s ease;
         }
         a {
-            color: #B29DA3; /* 链接颜色 */
+            color: var(--link-color);
             text-decoration: none;
+            transition: color 0.2s ease;
         }
         a:hover {
             text-decoration: underline;
+            color: var(--link-hover-color);
+        }
+        strong {
+            color: var(--strong-color);
+            transition: color 0.3s ease;
+        }
+        .note {
+            background-color: var(--note-bg);
+            border-left: 4px solid var(--note-border);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
         .author-info {
             text-align: center;
             margin-top: 40px;
             font-size: 0.9em;
-            color: #888;
+            color: var(--primary-text-color);
+        }
+
+        /* 代码块样式 */
+        .code-block {
+            background-color: var(--code-bg);
+            border: 1px solid var(--code-border);
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden; /* 保证圆角 */
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .code-header {
+            background-color: var(--code-header-bg);
+            color: var(--code-header-text);
+            padding: 10px 15px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--code-border);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        .code-header:hover {
+            background-color: var(--link-hover-bg); /* 与主链接悬停背景一致 */
+        }
+        .toggle-icon {
+            font-size: 1.2em;
+            transform: rotate(0deg);
+            transition: transform 0.2s ease;
+        }
+        .code-block.collapsed .toggle-icon {
+            transform: rotate(-90deg); /* 折叠时旋转箭头 */
+        }
+        /* highlight.js 渲染的实际代码容器 */
+        pre code.hljs {
+            display: block;
+            padding: 15px;
+            margin: 0; /* 移除默认外边距 */
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 1em; /* 增大字体 */
+            line-height: 1.5; /* 增加行高 */
+            max-height: 800px; /* 限制最大高度 */
+            transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+            background-color: var(--code-bg); /* 确保与 --code-bg 同步 */
+        }
+        .code-block.collapsed pre code.hljs {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
+        }
+        /* 行内代码 */
+        code {
+            background-color: rgba(0, 0, 0, 0.05); /* 更透明的 inline code 背景 */
+            color: var(---primary-text-color); /* inline code 颜色 */
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .dark-mode code {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .container {
+                max-width: 800px; /* Widen for mid-size screens */
+                width: calc(100% - 300px); /* Adust calc base */
+            }
+        }
+
+        @media (max-width: 1024px) {
+            #toc {
+                left: 10px;
+                width: 220px;
+                padding: 15px 8px;
+            }
+            .container {
+                margin-left: 250px; /* 调整内容区域左边距 */
+                margin-right: 10px;
+                padding: 25px;
+                width: calc(100% - 280px); /* Smaller remaining width */
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+                justify-content: flex-start; /* Remove center alignment for tiny screens */
+            }
+            #toc {
+                display: none; /* 小屏幕下隐藏目录 */
+            }
+            .container {
+                margin-left: auto; /* Reset margin */
+                margin-right: auto; /* Reset margin */
+                width: 100%; /* Full width */
+                padding: 20px;
+            }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.5em; }
+            h3 { font-size: 1.3em; }
+            h4 { font-size: 1.1em; }
+            p { font-size: 1em; }
+            .theme-switch {
+                top: 15px;
+                right: 15px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- 主题切换按钮 -->
+    <div class="theme-switch">
+        <button id="theme-toggle">切换主题</button>
+    </div>
+
+    <!-- 浮动目录 -->
+    <div id="toc">
+        <h3>目录</h3>
+        <ul id="toc-list">
+            <!-- 目录项将由JavaScript动态生成 -->
+        </ul>
+    </div>
+
     <div class="container">
-        <h1 style="text-align: center;">BOT 物品栏插件解析</h1>
+        <h1 id="bot-inventory-plugin-analysis">bot_inventory解析</h1>
         <p class="author-info">
-            作者: un1 powered by Gemini<br>
-            一个为CS:GO新手玩家编写的插件代码详解
+            un1 powered by Gemini<br>
         </p>
 
         <div class="note">
@@ -91,15 +364,20 @@
             <p>SourcePawn 是一种用来编写插件的脚本语言，这些插件就像是给游戏服务器安装的“小工具”，能实现各种有趣的功能。而这份代码，就是给你的 CS:GO 服务器添加一个“BOT 换装系统”！</p>
         </div>
 
-        <h2>一、插件概览：它是什么？</h2>
-        <p>这个名为 "BOT Inventory" (BOT 物品栏) 的 SourcePawn 插件，顾名思义，它的主要功能就是<strong>给 CS:GO 服务器中的 BOT（机器人）玩家分配虚拟的库存物品</strong>。这意味着 BOT 不再是光秃秃的默认装备，它们可以拥有随机的武器皮肤、手套、音乐盒、勋章（硬币）甚至特工模型和臂章！插件还能处理这些物品的磨损度、种子（图案位置）、贴纸和 StatTrak（计数器）等细节，让 BOT 看起来更真实，更有趣。</p>
+        <h2 id="plugin-overview">一、插件概览：它是什么？</h2>
+        <p>这个名为 "BOT Inventory" (BOT 物品栏) 的 SourcePawn 插件，顾名思义，它的主要功能就是<strong>给 CS:GO 服务器中的 BOT（机器人）玩家分配虚拟的库存物品</strong>。这意味着 BOT 不再是单调乏味的原皮，它们可以拥有随机的武器皮肤、手套、音乐盒、勋章（硬币）甚至特工模型和臂章！插件还能处理这些物品的磨损度、种子（图案位置）、贴纸和 StatTrak（计数器）等细节，让 BOT 看起来更真实，更有趣。</p>
         <p>如果你有一个专注于和 BOT 玩乐、或者想让 BOT 看起来更个性化的个人服务器，这个插件就能派上用场！</p>
 
-        <h2>二、代码构成详解</h2>
+        <h2 id="code-structure">二、代码构成详解</h2>
 
-        <h3>2.1 引入头文件（<code>#include</code>）：插件的“工具箱”</h3>
+        <h3 id="include-headers">2.1 引入头文件（<code>#include</code>）：插件的“工具箱”</h3>
         <p>在 SourcePawn 中，<code>#include</code> 就像是把别人写好的、现成的代码模块（称为“头文件”）“借”过来用，这样我们就不必从头开始写所有功能了。这些头文件提供了很多与游戏交互、处理数据的“工具”。</p>
-        <pre><code class="language-sourcepawn">#pragma semicolon 1
+        <div class="code-block">
+            <div class="code-header">
+                <span><code>#include</code> 文件列表</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">#pragma semicolon 1
 
 #include &lt;sourcemod>
 #include &lt;sdkhooks>
@@ -110,6 +388,7 @@
 #include &lt;kento_rankme/rankme>
 #include &lt;smlib>
 #include &lt;modelch></code></pre>
+        </div>
         <ul>
             <li><code>#pragma semicolon 1</code>: 这是一条编译器指令，告诉编译器每条语句都必须以分号 (<code>;</code>) 结尾，这是 SourcePawn 的最佳实践。</li>
             <li><code>sourcemod</code>: SourceMod 插件框架的核心头文件，提供了插件运行所需的基本函数和结构。</li>
@@ -123,9 +402,14 @@
             <li><code>modelch</code>: 可能是用于修改玩家模型的扩展。</li>
         </ul>
 
-        <h3>2.2 全局变量（<code>g_</code>）：插件的“数据仓库”</h3>
+        <h3 id="global-variables">2.2 全局变量（<code>g_</code>）：插件的“数据仓库”</h3>
         <p>全局变量是在整个插件中都可以访问和使用的数据。这些变量用于存储插件运行时需要记住的各种信息，比如物品的数量、每个 BOT 拥有的物品属性等。</p>
-        <pre><code class="language-sourcepawn">bool g_bLateLoaded;
+        <div class="code-block">
+            <div class="code-header">
+                <span>全局变量定义</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">bool g_bLateLoaded;
 int g_iWeaponCount;
 int g_iSkinCount;
 int g_iGloveCount;
@@ -197,6 +481,7 @@ enum MedalCategory_t
 	MEDAL_CATEGORY_SEASON_COIN = 5, // 赛季硬币类别，用于设置勋章
 	MEDAL_CATEGORY_COUNT, 
 };</code></pre>
+        </div>
         <ul>
             <li><code>MAXPLAYERS + 1</code>: 数组大小通常这样写，因为 SourceMod 的客户端 ID 一般从 1 开始，到 <code>MaxClients</code>。这个宏定义了服务器支持的最大玩家数量。</li>
             <li><strong>数据存储</strong>：大量的 <code>g_</code> 开头的变量都是用来存储每个 BOT 玩家（通过客户端ID索引）的各种物品属性的。比如武器皮肤的磨损、种子，手套的种类，特工模型等等。这些数据是随机生成然后存储在这里，以便在游戏过程中应用到 BOT 身上。</li>
@@ -206,9 +491,14 @@ enum MedalCategory_t
             <li><code>MedalCategory_t</code>: 这是和游戏内部勋章（硬币）类别对应的枚举，用来告诉游戏我们要设置哪种类型的勋章给玩家。</li>
         </ul>
 
-        <h3>2.3 插件信息（<code>Plugin myinfo</code>）</h3>
+        <h3 id="plugin-info">2.3 插件信息（<code>Plugin myinfo</code>）</h3>
         <p>这是每个 SourceMod 插件都必须有的基本信息块，用于向服务器显示插件的名称、作者、版本等。</p>
-        <pre><code class="language-sourcepawn">public Plugin myinfo = 
+        <div class="code-block">
+            <div class="code-header">
+                <span>插件基本信息</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public Plugin myinfo = 
 {
 	name = "BOT Inventory", 
 	author = "manico", 
@@ -216,22 +506,34 @@ enum MedalCategory_t
 	version = "1.0.2", 
 	url = "http://steamcommunity.com/id/manico001"
 };</code></pre>
+        </div>
         <p>这部分信息会在服务器的插件列表中显示，方便管理员查看和管理。</p>
 
-        <h3>2.4 插件加载与初始化</h3>
+        <h3 id="plugin-load-init">2.4 插件加载与初始化</h3>
 
-        <h4><code>public APLRes AskPluginLoad2(...)</code></h4>
+        <h4 id="askpluginload2"><code>public APLRes AskPluginLoad2(...)</code></h4>
         <p>这个函数在插件加载的早期阶段被调用，用来判断插件是首次加载还是“延迟加载”（即服务器已经运行一段时间后才加载）。</p>
-        <pre><code class="language-sourcepawn">public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] chError, int iErrMax)
+        <div class="code-block">
+            <div class="code-header">
+                <span>插件加载询问</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] chError, int iErrMax)
 {
 	g_bLateLoaded = bLate;
 	return APLRes_Success;
 }</code></pre>
+        </div>
         <p><code>g_bLateLoaded = bLate;</code> 这一行将加载状态存入全局变量，方便后续代码判断。如果插件是延迟加载的，需要做一些额外的处理，确保所有物品数据都已同步。</p>
 
-        <h4><code>public void OnPluginStart()</code>：插件启动时！</h4>
+        <h4 id="onpluginstart"><code>public void OnPluginStart()</code>：插件启动时！</h4>
         <p>这是插件真正开始工作的地方。当服务器启动或插件被手动加载时，这个函数会执行一次。它负责进行各种初始化设置、检查依赖、并注册“事件钩子”。</p>
-        <pre><code class="language-sourcepawn">public void OnPluginStart()
+        <div class="code-block">
+            <div class="code-header">
+                <span>插件启动函数</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public void OnPluginStart()
 {
 	// 检查是否是CS:GO服务器
 	if (GetEngineVersion() != Engine_CSGO)
@@ -295,6 +597,7 @@ enum MedalCategory_t
 	if (!(g_hForceUpdate = EndPrepSDKCall()))
 		SetFailState("Failed to get CGameClient::UpdateAcknowledgedFramecount signature");
 }</code></pre>
+        </div>
         <ul>
             <li><strong>环境检查</strong>：首先检查游戏版本是否是 CS:GO，并确保所需的扩展（如 PTaH）已加载且版本正确。如果条件不满足，插件会停止运行并报错。</li>
             <li><strong>事件钩子 (<code>HookEvent</code>)</strong>：这是 SourceMod 插件的核心机制之一。通过钩子，插件可以在游戏发生特定事件（比如玩家出生、死亡、回合开始）时，在这些事件发生“前”或“后”执行自定义的代码。
@@ -309,11 +612,16 @@ enum MedalCategory_t
             <li><strong>SDK 调用准备 (<code>StartPrepSDKCall</code>)</strong>: 这是一项高级功能，允许插件直接调用游戏引擎内部的 C++ 函数。插件利用这个功能来修改 BOT 的勋章（<code>CCSPlayer::SetRank</code>）和强制更新客户端视图（<code>CGameClient::UpdateAcknowledgedFramecount</code>），这对于应用自定义库存变化至关重要。这些函数的具体地址或偏移量是从 <code>botinventory.games</code> 这个游戏数据文件里读取的。</li>
         </ul>
 
-        <h3>2.5 物品数据同步与构建列表</h3>
+        <h3 id="item-data-sync">2.5 物品数据同步与构建列表</h3>
 
-        <h4><code>public void eItems_OnItemsSynced()</code></h4>
+        <h4 id="eitems-onsynced"><code>public void eItems_OnItemsSynced()</code></h4>
         <p>当 <code>eItems</code> 扩展成功同步了所有 CS:GO 物品数据后，这个函数会被调用。它获取物品的总数，然后触发构建皮肤列表的工作。</p>
-        <pre><code class="language-sourcepawn">public void eItems_OnItemsSynced()
+        <div class="code-block">
+            <div class="code-header">
+                <span>eItems 物品同步回调</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public void eItems_OnItemsSynced()
 {
 	g_iWeaponCount = eItems_GetWeaponCount();
 	g_iSkinCount = eItems_GetPaintsCount();
@@ -322,11 +630,17 @@ enum MedalCategory_t
 	
 	BuildSkinsArrayList(); // 调用函数构建所有皮肤的动态列表
 }</code></pre>
+        </div>
         <p>这是确保插件能正确识别和使用所有游戏内物品（皮肤、手套、特工等）数量的关键一步。</p>
 
-        <h4><code>public void BuildSkinsArrayList()</code>：整理皮肤数据</h4>
+        <h4 id="build-skins-arraylist"><code>public void BuildSkinsArrayList()</code>：整理皮肤数据</h4>
         <p>这个函数会遍历所有武器、手套和特工模型，并将它们的有效皮肤/模型定义索引（DefIndex）组织到动态数组 (<code>ArrayList</code>) 中，方便后续随机选择。</p>
-        <pre><code class="language-sourcepawn">public void BuildSkinsArrayList()
+        <div class="code-block">
+            <div class="code-header">
+                <span>构建皮肤动态列表</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public void BuildSkinsArrayList()
 {
 	// 遍历所有武器，构建其可用皮肤列表
 	for (int iWeapon = 0; iWeapon &lt; g_iWeaponCount; iWeapon++)
@@ -371,13 +685,19 @@ enum MedalCategory_t
 			g_ArrayCTAgents.Push(eItems_GetAgentDefIndexByAgentNum(iAgent));
 	}
 }</code></pre>
+        </div>
         <p>这个函数是为随机分配物品做准备，它把所有可能的武器皮肤、手套皮肤和特工模型都整理好，分类存储起来。<code>DefIndex</code> 全称是 Definition Index，可以理解为游戏内部对某个物品（比如 AK-47、龙狙皮肤）的唯一数字编号。</p>
 
-        <h3>2.6 比赛结束数据修改：让 Bot 的数据也“好看”</h3>
+        <h3 id="end-of-match-data">2.6 比赛结束数据修改：让 Bot 的数据也“好看”</h3>
 
-        <h4><code>Action OnEndOfMatchAllPlayersData(...)</code></h4>
+        <h4 id="on-end-of-match-all-players-data"><code>Action OnEndOfMatchAllPlayersData(...)</code></h4>
         <p>当一局游戏结束，服务器会向每个客户端发送一个消息，告诉他们所有玩家的统计数据，包括他们的库存信息，用于显示在比赛结束界面。这个函数就拦截了这个消息，并修改 BOT 的库存数据，让他们的装备在结算界面上也能显示出来。</p>
-        <pre><code class="language-sourcepawn">Action OnEndOfMatchAllPlayersData(UserMsg iMsgId, Protobuf hMessage, const int[] iPlayers, int iPlayersNum, bool bReliable, bool bInit)
+        <div class="code-block">
+            <div class="code-header">
+                <span>比赛结束数据修改</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">Action OnEndOfMatchAllPlayersData(UserMsg iMsgId, Protobuf hMessage, const int[] iPlayers, int iPlayersNum, bool bReliable, bool bInit)
 {
 	if (bReliable) // 确保消息可靠
 	{
@@ -466,6 +786,7 @@ enum MedalCategory_t
 	}
 	return Plugin_Changed; // 告诉游戏消息已被修改
 }</code></pre>
+        </div>
         <ul>
             <li><strong>Protobuf</strong>：这是一种高效的数据序列化格式，游戏内部用来传输复杂数据。插件通过操作 <code>Protobuf</code> 消息来修改比赛结束数据。</li>
             <li><strong>伪造XUID</strong>：为了让 BOT 的物品看起来像真实玩家的物品，插件会给 BOT 分配一个伪造的 Steam ID (XUID)，并在消息中标记他们为“不是 BOT”。</li>
@@ -473,11 +794,16 @@ enum MedalCategory_t
             <li><strong>贴纸和臂章</strong>：贴纸和臂章也在这里被添加或修改，它们的属性（比如位置、ID）会根据插件的随机选择写入消息中。</li>
         </ul>
 
-        <h3>2.7 地图加载事件</h3>
+        <h3 id="map-load-events">2.7 地图加载事件</h3>
 
-        <h4><code>public void OnMapStart()</code>：地图加载时</h4>
+        <h4 id="onmapstart"><code>public void OnMapStart()</code>：地图加载时</h4>
         <p>每次新地图加载时，这个函数都会被调用。它的主要作用是清理并重新准备地图上掉落武器的列表。</p>
-        <pre><code class="language-sourcepawn">public void OnMapStart()
+        <div class="code-block">
+            <div class="code-header">
+                <span>地图开始函数</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public void OnMapStart()
 {
 	if(g_ArrayMapWeapons != null)
 	{
@@ -486,13 +812,19 @@ enum MedalCategory_t
 	}
 	g_ArrayMapWeapons = new ArrayList(); // 创建新的列表
 }</code></pre>
+        </div>
         <p>这个操作是为了确保每次新地图开始时，用于追踪地图上掉落武器的列表都是空的，避免旧地图的数据干扰。</p>
 
-        <h3>2.8 客户端加载完成事件</h3>
+        <h3 id="client-load-complete">2.8 客户端加载完成事件</h3>
 
-        <h4><code>public void OnClientPostAdminCheck(int client)</code>：玩家（BOT）准备好上线了！</h4>
+        <h4 id="onclientpostadmincheck"><code>public void OnClientPostAdminCheck(int client)</code>：玩家（BOT）准备好上线了！</h4>
         <p>当一个客户端（BOT 或真实玩家）完全连接到服务器并准备好进入游戏时，这个函数就会被调用。这是插件为 BOT 分配所有个性化物品的核心区域。</p>
-        <pre><code class="language-sourcepawn">public void OnClientPostAdminCheck(int client)
+        <div class="code-block">
+            <div class="code-header">
+                <span>客户端管理函数</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public void OnClientPostAdminCheck(int client)
 {
 	if (IsValidClient(client)) // 确保是有效的BOT
 	{
@@ -586,6 +918,7 @@ enum MedalCategory_t
 		SDKHook(client, SDKHook_WeaponEquip, SDK_OnWeaponEquip);
 	}
 }</code></pre>
+        </div>
         <ul>
             <li><strong>全局变量填充</strong>：这个函数会为每个玩家（特别是 BOT）填充之前声明的各种全局变量，这些变量存储了他们的音乐盒、硬币、特工模型、臂章、手套和所有武器的皮肤、磨损、贴纸、StatTrak 等信息，并且大量使用了 <code>Math_GetRandomInt</code> 和 <code>IsItMyChance</code> 来随机决定这些属性。</li>
             <li><strong>物品 ID 生成</strong>：<code>IDLow</code> 和 <code>IDHigh</code> 用于生成唯一的 64 位物品 ID，这是 CS:GO 区分每个物品的关键。</li>
@@ -594,11 +927,16 @@ enum MedalCategory_t
             <li><strong>事件钩子</strong>：在这里再次钩子了玩家的受伤事件（<code>OnTakeDamageAlive</code>）和武器装备事件（<code>SDK_OnWeaponEquip</code>），以便在游戏过程中实时更新 StatTrak 或处理地图武器。</li>
         </ul>
 
-        <h3>2.9 物品给予事件钩子</h3>
+        <h3 id="item-give-hooks">2.9 物品给予事件钩子</h3>
 
-        <h4><code>Action GiveNamedItemPre(...)</code>：给予物品前</h4>
+        <h4 id="givenameditempre"><code>Action GiveNamedItemPre(...)</code>：给予物品前</h4>
         <p>当游戏准备通过名称（如“weapon_ak47”）给予玩家一个物品时，这个函数会在物品真正给予之前被调用。插件利用它来“狸猫换太子”，把默认的刀换成我们为 BOT 随机指定的刀。</p>
-        <pre><code class="language-sourcepawn">Action GiveNamedItemPre(int client, char szClassname[64], CEconItemView &amp;pItem, bool &amp;bIgnoredCEconItemView, bool &amp;bOriginIsNULL, float fOrigin[3])
+        <div class="code-block">
+            <div class="code-header">
+                <span>处理物品给予前</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">Action GiveNamedItemPre(int client, char szClassname[64], CEconItemView &amp;pItem, bool &amp;bIgnoredCEconItemView, bool &amp;bOriginIsNULL, float fOrigin[3])
 {
 	if (!IsValidClient(client))
 		return Plugin_Continue; // 非BOT玩家或无效客户端，跳过
@@ -623,11 +961,17 @@ enum MedalCategory_t
 
 	return Plugin_Changed; // 告诉PTaH，我们修改了它
 }</code></pre>
+        </div>
         <p>这个函数主要针对刀具。当游戏系统要给 BOT 配备默认刀时，插件会拦截这个操作，把默认刀的名字替换成之前为该 BOT 随机生成的自定义刀具的名字，从而实现 BOT 佩戴自定义刀具的效果。</p>
 
-        <h4><code>void GiveNamedItemPost(...)</code>：给予物品后</h4>
+        <h4 id="givenameditempost"><code>void GiveNamedItemPost(...)</code>：给予物品后</h4>
         <p>当一个物品被给予玩家实体后，这个函数会被调用。它会设置武器的各项自定义属性。</p>
-        <pre><code class="language-sourcepawn">void GiveNamedItemPost(int client, const char[] szClassname, const CEconItemView pItem, int iEntity, bool bOriginIsNULL, const float fOrigin[3])
+        <div class="code-block">
+            <div class="code-header">
+                <span>处理物品给予后</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">void GiveNamedItemPost(int client, const char[] szClassname, const CEconItemView pItem, int iEntity, bool bOriginIsNULL, const float fOrigin[3])
 {
 	int iDefIndex = eItems_GetWeaponDefIndexByClassName(szClassname);
 	if (iDefIndex &lt;= -1)
@@ -647,17 +991,23 @@ enum MedalCategory_t
 		}
 	}
 }</code></pre>
+        </div>
         <ul>
             <li><strong><code>iEntity</code></strong>：这是刚被给予玩家的物品在游戏中的唯一实体ID。</li>
             <li><strong><code>m_hPrevOwner</code></strong>: 检查这个属性确保物品是游戏刚生成的，而不是玩家捡起的。</li>
             <li><strong><code>SetWeaponProps(client, iEntity)</code></strong>：这是核心函数，它会为这个新生成的武器实体设置磨损、种子、皮肤、StatTrak、贴纸等所有属性。</li>
         </ul>
 
-        <h3>2.10 伤害事件与 StatTrak 更新</h3>
+        <h3 id="damage-stattrak">2.10 伤害事件与 StatTrak 更新</h3>
 
-        <h4><code>Action OnTakeDamageAlive(...)</code>：受到伤害或造成击杀时</h4>
+        <h4 id="ontakedamagealive"><code>Action OnTakeDamageAlive(...)</code>：受到伤害或造成击杀时</h4>
         <p>当任何实体受到伤害时，这个函数都会被触发。插件检查这是否导致了击杀，并更新武器的 StatTrak 计数器。</p>
-        <pre><code class="language-sourcepawn">Action OnTakeDamageAlive(int victim, int &amp;attacker, int &amp;iInflictor, float &amp;fDamage, int &amp;iDamageType, int &amp;iWeapon, float fDamageForce[3], float fDamagePosition[3])
+        <div class="code-block">
+            <div class="code-header">
+                <span>伤害处理与 StatTrak 更新</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">Action OnTakeDamageAlive(int victim, int &amp;attacker, int &amp;iInflictor, float &amp;fDamage, int &amp;iDamageType, int &amp;iWeapon, float fDamageForce[3], float fDamagePosition[3])
 {
 	// 如果目标不会死亡，则跳过
 	if (float(GetClientHealth(victim)) - fDamage > 0.0)
@@ -694,16 +1044,22 @@ enum MedalCategory_t
 	
 	return Plugin_Continue;
 }</code></pre>
+        </div>
         <ul>
             <li><strong>StatTrak 更新</strong>：这个函数监测 BOT 的击杀。如果 BOT 手持的武器带有 StatTrak 计数器（品质为 9），它会从 RankMe 插件获取该武器的击杀数，然后通过修改武器实体的属性（Attribute ID 80）来更新 StatTrak 数字。</li>
             <li><strong>强制更新</strong>：<code>SDKCall(g_hForceUpdate, attacker, -1);</code> 这一行非常重要，它强制客户端立刻刷新道具数据，这样你在游戏中就能实时看到 BOT 武器上的 StatTrak 击杀数增加了。</li>
         </ul>
 
-        <h3>2.11 武器拾取和装备事件</h3>
+        <h3 id="weapon-pickup-equip">2.11 武器拾取和装备事件</h3>
 
-        <h4><code>Action WeaponCanUsePre(...)</code>：武器能否被拾取前</h4>
+        <h4 id="weaponcanusepre"><code>Action WeaponCanUsePre(...)</code>：武器能否被拾取前</h4>
         <p>这个函数主要用于解决在“休闲模式”中，玩家不能随意拾取地上武器的问题。在这里，它确保 BOT 始终可以拾取地上的刀具。</p>
-        <pre><code class="language-sourcepawn">Action WeaponCanUsePre(int client, int iWeapon, bool &amp;bPickup)
+        <div class="code-block">
+            <div class="code-header">
+                <span>武器拾取前处理</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">Action WeaponCanUsePre(int client, int iWeapon, bool &amp;bPickup)
 {
 	int iDefIndex = eItems_GetWeaponDefIndexByWeapon(iWeapon);
 	if (eItems_IsDefIndexKnife(iDefIndex))
@@ -713,11 +1069,17 @@ enum MedalCategory_t
 	}
 	return Plugin_Continue;
 }</code></pre>
+        </div>
         <p>通过这个钩子，BOT 可以自由拾取地上的刀，这对于那些地图上预设的刀具（如 CS_GO_Knife）来说尤其有用。</p>
 
-        <h4><code>public Action SDK_OnWeaponEquip(...)</code>：武器被装备时</h4>
+        <h4 id="sdk-onweaponequip"><code>public Action SDK_OnWeaponEquip(...)</code>：武器被装备时</h4>
         <p>当一个玩家（这里主要是 BOT）装备一把武器时，这个函数会被调用。</p>
-        <pre><code class="language-sourcepawn">public Action SDK_OnWeaponEquip(int client, int iWeapon)
+        <div class="code-block">
+            <div class="code-header">
+                <span>武器装备时处理</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public Action SDK_OnWeaponEquip(int client, int iWeapon)
 {
     // 检查是否是地图上刷新的武器且没有主人
     if(IsMapWeapon(iWeapon, true)) // 如果是地图武器，且被BOT捡起，则从地图武器列表中移除
@@ -731,11 +1093,17 @@ enum MedalCategory_t
     }
     return Plugin_Continue;
 }</code></pre>
+        </div>
         <p>这个钩子关注的是地图上预刷新的武器。如果 BOT 捡起了这些武器，插件会启动一个短暂的计时器，来为这些武器设置自定义属性。</p>
 
-        <h4><code>public Action Timer_MapWeaponEquipped(...)</code>：处理地图武器装备的定时器</h4>
+        <h4 id="timer-mapweaponequipped"><code>public Action Timer_MapWeaponEquipped(...)</code>：处理地图武器装备的定时器</h4>
         <p>作为 <code>SDK_OnWeaponEquip</code> 的后续，这个定时器函数会在短时间后执行，目的就是给 BOT 刚刚捡起来的地图武器也附加上自定义的物品 ID 和所有权信息。</p>
-        <pre><code class="language-sourcepawn">public Action Timer_MapWeaponEquipped(Handle timer, DataPack datapack)
+        <div class="code-block">
+            <div class="code-header">
+                <span>地图武器装备定时器</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public Action Timer_MapWeaponEquipped(Handle timer, DataPack datapack)
 {
 	datapack.Reset();
 	int client = datapack.ReadCell();
@@ -758,13 +1126,19 @@ enum MedalCategory_t
 	
 	return Plugin_Stop;
 }</code></pre>
+        </div>
         <p>通过设置 <code>m_OriginalOwnerXuidLow</code> 和 <code>m_OriginalOwnerXuidHigh</code>，插件让 BOT 捡起的地图武器也看起来像是他们自己的库存物品，从而能在死亡信息或结算界面中显示正确的武器信息。</p>
 
-        <h3>2.12 回合开始扫描地图武器</h3>
+        <h3 id="round-start-scan">2.12 回合开始扫描地图武器</h3>
 
-        <h4><code>public Action Event_OnRoundStart(...)</code>：回合开始时</h4>
+        <h4 id="event-onroundstart"><code>public Action Event_OnRoundStart(...)</code>：回合开始时</h4>
         <p>每当一个新回合开始时，这个函数就会被调用。它的任务是扫描地图上所有没有所有者的武器（即那些刷新在地图上或玩家丢弃的），并将它们添加到 <code>g_ArrayMapWeapons</code> 列表中，以便后续追踪。</p>
-        <pre><code class="language-sourcepawn">public Action Event_OnRoundStart(Event eEvent, const char[] szName, bool bDontBroadcast)
+        <div class="code-block">
+            <div class="code-header">
+                <span>回合开始事件</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public Action Event_OnRoundStart(Event eEvent, const char[] szName, bool bDontBroadcast)
 {
 	char szWeaponClassname[64];
 	for(int i = MaxClients; i &lt; GetMaxEntities(); i++) // 遍历所有实体（从玩家ID之后开始）
@@ -791,13 +1165,19 @@ enum MedalCategory_t
 
 	return Plugin_Continue;
 }</code></pre>
+        </div>
         <p>这个函数为 <code>SDK_OnWeaponEquip</code> 和 <code>Timer_MapWeaponEquipped</code> 提供了基础数据，让插件知道哪些武器是来自地图上的默认生成，从而可以对其进行特殊处理。</p>
 
-        <h3>2.13 玩家出生和死亡事件</h3>
+        <h3 id="player-spawn-death">2.13 玩家出生和死亡事件</h3>
 
-        <h4><code>public void Event_PlayerSpawn(...)</code>：玩家（BOT）出生时</h4>
+        <h4 id="event-playerspawn"><code>public void Event_PlayerSpawn(...)</code>：玩家（BOT）出生时</h4>
         <p>当玩家或 BOT 出生（复活）时，这个函数会被触发。它负责为 BOT 立刻配备上手套、音乐盒和勋章。</p>
-        <pre><code class="language-sourcepawn">public void Event_PlayerSpawn(Event eEvent, const char[] szName, bool bDontBroadcast)
+        <div class="code-block">
+            <div class="code-header">
+                <span>玩家出生事件</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public void Event_PlayerSpawn(Event eEvent, const char[] szName, bool bDontBroadcast)
 {
 	int client = GetClientOfUserId(eEvent.GetInt("userid")); // 获取出生玩家的客户端ID
 	if (IsValidClient(client))
@@ -817,13 +1197,19 @@ enum MedalCategory_t
 		}
 	}
 }</code></pre>
+        </div>
         <ul>
             <li><strong>手套、音乐盒、勋章</strong>：这里是 BOT 获得手套、音乐盒和勋章/硬币的入口。手套的实际生成由 <code>GivePlayerGloves</code> 函数处理。音乐盒和勋章则直接通过设置玩家实体的属性或调用 SDK 函数来应用。</li>
         </ul>
 
-        <h4><code>public Action Event_PlayerDeath(...)</code>：玩家（BOT）死亡时</h4>
+        <h4 id="event-playerdeath"><code>public Action Event_PlayerDeath(...)</code>：玩家（BOT）死亡时</h4>
         <p>当一个玩家（BOT）死亡时，这个函数会捕捉死亡事件，并修改死亡信息，确保死亡通知中显示的武器 ID 能够对应上 BOT 实际佩戴的自定义皮肤。</p>
-        <pre><code class="language-sourcepawn">public Action Event_PlayerDeath(Event eEvent, const char[] szName, bool bDontBroadcast)
+        <div class="code-block">
+            <div class="code-header">
+                <span>玩家死亡事件</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public Action Event_PlayerDeath(Event eEvent, const char[] szName, bool bDontBroadcast)
 {
 	int client = GetClientOfUserId(eEvent.GetInt("attacker")); // 获取攻击者的客户端ID
 	if (IsValidClient(client)) // 确保是有效的BOT攻击者
@@ -850,13 +1236,19 @@ enum MedalCategory_t
 	}
 	return Plugin_Continue;
 }</code></pre>
+        </div>
         <p>这个函数确保当 BOT 造成击杀时，显示的击杀信息中，武器的物品 ID 是我们伪造的那个，而不是默认的 ID，这样才能正确地在死亡提示中显示出自定义皮肤。</p>
 
-        <h3>2.14 模型更改钩子</h3>
+        <h3 id="model-change-hook">2.14 模型更改钩子</h3>
 
-        <h4><code>public Action MdlCh_PlayerSpawn(...)</code>：玩家模型生成时</h4>
+        <h4 id="mdlch-playerspawn"><code>public Action MdlCh_PlayerSpawn(...)</code>：玩家模型生成时</h4>
         <p>这个函数是 <code>modelch</code> 扩展提供的钩子。当玩家模型即将被设置时，它允许插件介入并修改模型路径和语音前缀，从而实现自定义特工模型。</p>
-        <pre><code class="language-sourcepawn">public Action MdlCh_PlayerSpawn(int client, bool bCustom, char[] szModel, int iModelLength, char[] szVoPrefix, int iPrefixLength)
+        <div class="code-block">
+            <div class="code-header">
+                <span>模型更改钩子</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public Action MdlCh_PlayerSpawn(int client, bool bCustom, char[] szModel, int iModelLength, char[] szVoPrefix, int iPrefixLength)
 {	
 	if (!IsValidClient(client) || !g_bUseCustomPlayer[client])
 		return Plugin_Continue; // 如果不是有效的BOT或BOT不使用自定义模型，则跳过
@@ -881,16 +1273,22 @@ enum MedalCategory_t
 
 	return Plugin_Changed; // 告诉modelch插件我们修改了模型
 }</code></pre>
+        </div>
         <ul>
             <li><strong>自定义特工模型</strong>：如果 BOT 被随机分配了自定义特工模型，这个函数会用之前预加载的模型路径覆盖掉默认的模型路径。</li>
             <li><strong>臂章显示</strong>：臂章的显示也通过这里修改玩家实体的 <code>m_vecPlayerPatchEconIndices</code> 属性来实现。它会根据随机确定的臂章种类和组合模式，将臂章的 DefIndex 写入到玩家的四个臂章槽位中。</li>
         </ul>
 
-        <h3>2.15 武器属性设置核心函数</h3>
+        <h3 id="weapon-prop-set">2.15 武器属性设置核心函数</h3>
 
-        <h4><code>void SetWeaponProps(int client, int iEntity)</code>：设置武器的“灵魂”！</h4>
+        <h4 id="setweaponprops"><code>void SetWeaponProps(int client, int iEntity)</code>：设置武器的“灵魂”！</h4>
         <p>这个函数是插件的核心之一，它负责将之前为 BOT 随机生成的所有武器属性（皮肤、磨损、贴纸、StatTrak 等）应用到游戏中的武器实体上。这使得武器在游戏中看起来、用起来都像真正的自定义皮肤。</p>
-        <pre><code class="language-sourcepawn">void SetWeaponProps(int client, int iEntity)
+        <div class="code-block">
+            <div class="code-header">
+                <span>核心：武器属性设置</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">void SetWeaponProps(int client, int iEntity)
 {
 	int iDefIndex = eItems_GetWeaponDefIndexByWeapon(iEntity);
 	if (iDefIndex > -1)
@@ -958,6 +1356,7 @@ enum MedalCategory_t
 		SDKCall(g_hForceUpdate, client, -1); // 强制更新客户端数据
 	}
 }</code></pre>
+        </div>
         <ul>
             <li><strong>CEconItemView 与 CAttributeList</strong>：这是 SourceMod/游戏内部处理经济物品（比如皮肤、印花、StatTrak）的机制。<code>CEconItemView</code> 代表一个物品的所有数据，而 <code>CAttributeList</code> 则是存储这些物品具体属性（如皮肤 ID、磨损值）的列表。插件通过这些 API 来修改武器的“内部数据”。</li>
             <li><strong>属性 ID（Attribute ID）</strong>：每个物品属性都有一个唯一的数字 ID。例如：
@@ -975,11 +1374,16 @@ enum MedalCategory_t
             <li><strong>强制更新</strong>：再次调用 <code>SDKCall(g_hForceUpdate, client, -1);</code> 确保客户端能立刻看到这些属性的更新。</li>
         </ul>
 
-        <h3>2.16 给予玩家手套</h3>
+        <h3 id="give-gloves">2.16 给予玩家手套</h3>
 
-        <h4><code>public void GivePlayerGloves(int client)</code>：给予手套！</h4>
+        <h4 id="giveplayergloves"><code>public void GivePlayerGloves(int client)</code>：给予手套！</h4>
         <p>这个函数专门负责处理给 BOT 赋予自定义手套。它创建了一个新的“可穿戴物品”实体，并设置其属性。</p>
-        <pre><code class="language-sourcepawn">public void GivePlayerGloves(int client)
+        <div class="code-block">
+            <div class="code-header">
+                <span>给予手套函数</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public void GivePlayerGloves(int client)
 {
 	int iEntity = GetEntPropEnt(client, Prop_Send, "m_hMyWearables"); // 获取玩家当前佩戴的可穿戴物品
 	if (iEntity != -1)
@@ -1016,17 +1420,23 @@ enum MedalCategory_t
 		SDKCall(g_hForceUpdate, client, -1); // 强制更新客户端
 	}
 }</code></pre>
+        </div>
         <ul>
             <li><strong><code>wearable_item</code></strong>：这是 CS:GO 中用于手套、臂章等可穿戴物品的实体类型。插件会创建一个这样的实体给 BOT。</li>
             <li><strong>属性设置</strong>：与武器类似，手套也会设置其 DefIndex、皮肤 ID、磨损和种子等属性。</li>
             <li><strong>绑定到玩家</strong>：通过设置 <code>m_hOwnerEntity</code>、<code>m_hParent</code> 和 <code>m_hMyWearables</code> 等属性，确保手套正确地绑定在 BOT 身上。</li>
         </ul>
 
-        <h3>2.17 插件结束与清理</h3>
+        <h3 id="plugin-end-cleanup">2.17 插件结束与清理</h3>
 
-        <h4><code>public void OnClientDisconnect(int client)</code>：玩家（BOT）断开连接时</h4>
+        <h4 id="onclientdisconnect"><code>public void OnClientDisconnect(int client)</code>：玩家（BOT）断开连接时</h4>
         <p>当一个客户端（BOT）断开连接时，这个函数会被调用，它会移除之前为该客户端注册的 SDK 钩子，防止内存泄漏或意外行为。</p>
-        <pre><code class="language-sourcepawn">public void OnClientDisconnect(int client)
+        <div class="code-block">
+            <div class="code-header">
+                <span>客户端断开连接处理</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public void OnClientDisconnect(int client)
 {
 	if (IsValidClient(client))
 	{
@@ -1034,10 +1444,16 @@ enum MedalCategory_t
 		SDKUnhook(client, SDKHook_WeaponEquip, SDK_OnWeaponEquip); // 移除武器装备钩子
 	}
 }</code></pre>
+        </div>
 
-        <h4><code>public void OnPluginEnd()</code>：插件卸载时</h4>
+        <h4 id="onpluginend"><code>public void OnPluginEnd()</code>：插件卸载时</h4>
         <p>当插件被卸载或服务器关闭时，这个函数会执行，它会遍历所有在线玩家并调用 <code>OnClientDisconnect</code> 进行清理，确保所有钩子都被正确移除。</p>
-        <pre><code class="language-sourcepawn">public void OnPluginEnd()
+        <div class="code-block">
+            <div class="code-header">
+                <span>插件卸载清理</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">public void OnPluginEnd()
 {
 	for (int i = 1; i &lt;= MaxClients; i++)
 	{
@@ -1045,42 +1461,66 @@ enum MedalCategory_t
 			OnClientDisconnect(i); // 对每个在线客户端执行断开连接清理
 	}
 }</code></pre>
+        </div>
 
-        <h3>2.18 辅助函数（<code>stock</code>）：实用小工具</h3>
+        <h3 id="utility-functions">2.18 辅助函数（<code>stock</code>）：实用小工具</h3>
 
-        <h4><code>stock bool IsValidClient(int client)</code></h4>
+        <h4 id="is-valid-client"><code>stock bool IsValidClient(int client)</code></h4>
         <p>一个常用的辅助函数，用于判断一个给定的客户端 ID 是否代表一个有效的、已连接并进入游戏的 BOT 玩家。</p>
-        <pre><code class="language-sourcepawn">stock bool IsValidClient(int client)
+        <div class="code-block">
+            <div class="code-header">
+                <span>客户端有效性检查</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">stock bool IsValidClient(int client)
 {
 	return client > 0 && client &lt;= MaxClients && IsClientConnected(client) && IsClientInGame(client) && IsFakeClient(client) && !IsClientSourceTV(client);
 }</code></pre>
+        </div>
         <p>这个函数会检查客户端是否在有效范围内、是否已连接、是否在游戏中、是否是 BOT (<code>IsFakeClient(client)</code>)，并且不是 SourceTV 客户端。它确保我们只对真正的 BOT 进行操作。</p>
 
-        <h4><code>stock int FloatToInt(const char[] szValue, any ...)</code></h4>
+        <h4 id="float-to-int"><code>stock int FloatToInt(const char[] szValue, any ...)</code></h4>
         <p>一个将浮点数转换为整数的辅助函数，可能是为了方便字符串格式化。</p>
-        <pre><code class="language-sourcepawn">stock int FloatToInt(const char[] szValue, any ...)
+        <div class="code-block">
+            <div class="code-header">
+                <span>浮点数转整数</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">stock int FloatToInt(const char[] szValue, any ...)
 {
 	int szLen = strlen(szValue) + 255;
 	char[] szFormattedString = new char[szLen];
 	VFormat(szFormattedString, szLen, szValue, 2);
 	return StringToInt(szFormattedString);
 }</code></pre>
+        </div>
         <p>虽然 SourcePawn 可以直接进行浮点数到整数的转换（强制类型转换），这个函数似乎提供了一种通过字符串格式化来实现转换的方式。在现代 SourcePawn 中可能不是必需的，但依然有效。</p>
 
-        <h4><code>stock bool IsItMyChance(float fChance = 0.0)</code></h4>
+        <h4 id="is-it-my-chance"><code>stock bool IsItMyChance(float fChance = 0.0)</code></h4>
         <p>一个简单的几率判断函数，用于进行随机决策。</p>
-        <pre><code class="language-sourcepawn">stock bool IsItMyChance(float fChance = 0.0)
+        <div class="code-block">
+            <div class="code-header">
+                <span>几率判断函数</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">stock bool IsItMyChance(float fChance = 0.0)
 {
 	float flRand = Math_GetRandomFloat(0.0, 100.0);
 	if(fChance &lt;= 0.0)
 		return false;
 	return flRand &lt;= fChance;
 }</code></pre>
+        </div>
         <p>比如 <code>IsItMyChance(40.0)</code> 会有 40% 的几率返回 <code>true</code>，用于随机决定 BOT 是否使用贴纸、臂章等。</p>
 
-        <h4><code>stock bool IsMapWeapon(int iWeapon, bool bRemove = false)</code></h4>
+        <h4 id="is-map-weapon"><code>stock bool IsMapWeapon(int iWeapon, bool bRemove = false)</code></h4>
         <p>用于检查一个武器实体是否在之前收集的 <code>g_ArrayMapWeapons</code> 列表（地图上生成的武器）中，并且可以选择性地将其从列表中移除。</p>
-        <pre><code class="language-sourcepawn">stock bool IsMapWeapon(int iWeapon, bool bRemove = false)
+        <div class="code-block">
+            <div class="code-header">
+                <span>地图武器检查</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <pre><code class="language-sourcepawn">stock bool IsMapWeapon(int iWeapon, bool bRemove = false)
 {
 	if(g_ArrayMapWeapons == null)
 		return false;
@@ -1097,6 +1537,7 @@ enum MedalCategory_t
 	}
 	return false;
 }</code></pre>
+        </div>
         <p>这个函数帮助插件识别并管理那些在地图上默认生成而非玩家掉落的武器。</p>
 
         <p class="author-info" style="margin-top: 50px;">
@@ -1104,5 +1545,159 @@ enum MedalCategory_t
             希望这份详细的解析能帮助你更好地理解这个 SourcePawn 插件，让你的 CS:GO BOT 变得更有趣！
         </p>
     </div>
+
+    <!-- highlight.js 主JS文件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- SourcePawn 语言支持（如果 highlight.js 默认不包含） -->
+    <!-- 替换为 SourcePawn 语言的实际路径，如果 highlight.js 提供了的话 -->
+    <!-- 例如：<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js"></script> -->
+    <!-- 由于 SourcePawn 不是 Highlight.js 的内置语言，我们使用 C (因为 SourcePawn 语法和 C 类似) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/c.min.js"></script> 
+    <script>
+        // 初始化 highlight.js
+        hljs.highlightAll();
+
+        // -------- 主题切换逻辑 --------
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+        const highlightDarkThemeLink = document.getElementById('highlight-dark-theme');
+        const highlightLightThemeLink = document.querySelector('link[href*="atom-one-light"]');
+
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                htmlElement.classList.add('dark-mode');
+                highlightDarkThemeLink.disabled = false;
+                if (highlightLightThemeLink) highlightLightThemeLink.disabled = true;
+                themeToggle.textContent = '切换至浅色模式';
+            } else {
+                htmlElement.classList.remove('dark-mode');
+                highlightDarkThemeLink.disabled = true;
+                if (highlightLightThemeLink) highlightLightThemeLink.disabled = false;
+                themeToggle.textContent = '切换至深色模式';
+            }
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        applyTheme(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            let currentTheme = htmlElement.classList.contains('dark-mode') ? 'dark' : 'light';
+            let newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // -------- 代码折叠逻辑 --------
+        document.addEventListener('DOMContentLoaded', () => {
+            const codeBlocks = document.querySelectorAll('.code-block');
+
+            codeBlocks.forEach(block => {
+                const header = block.querySelector('.code-header');
+                if (header) {
+                    header.addEventListener('click', () => {
+                        block.classList.toggle('collapsed');
+                    });
+                     // 默认展开，如果需要默认折叠，在这里加上 block.classList.add('collapsed');
+                }
+            });
+        });
+
+        // -------- 动态目录 (TOC) 逻辑 --------
+        document.addEventListener('DOMContentLoaded', () => {
+            const tocList = document.getElementById('toc-list');
+            const headings = document.querySelectorAll('.container h2, .container h3, .container h4');
+            const tocItems = [];
+
+            // 1. 生成TOC列表
+            // Map to keep track of parent lists for nested headings
+            const levelMap = new Map(); 
+            levelMap.set(1, tocList); // h1's "parent" is the main ul
+
+            headings.forEach(heading => {
+                const id = heading.id || `section-${Math.random().toString(36).substr(2, 9)}`; // 确保有ID
+                heading.id = id;
+
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                li.appendChild(a);
+                
+                const level = parseInt(heading.tagName.substring(1)); // H2 -> 2, H3 -> 3, H4 -> 4
+
+                // Find the appropriate parent UL
+                let parentUL = levelMap.get(level - 1);
+                if (!parentUL) { // Fallback if parent not found (e.g., H4 after H2)
+                    for (let i = level - 2; i >= 1; i--) {
+                        if (levelMap.has(i)) {
+                            parentUL = levelMap.get(i);
+                            break;
+                        }
+                    }
+                    if (!parentUL) parentUL = tocList; // Default to top level
+                }
+
+                // Add to parent UL and update level map
+                let ulForCurrentLevel = parentUL.querySelector('ul');
+                if (!ulForCurrentLevel) {
+                    ulForCurrentLevel = document.createElement('ul');
+                    parentUL.appendChild(ulForCurrentLevel);
+                }
+                ulForCurrentLevel.appendChild(li);
+                levelMap.set(level, li); // The li itself contains the next level of ul
+
+                tocItems.push({ heading: heading, link: a });
+                
+                // Clear higher levels
+                for (let i = level + 1; i <= 4; i++) {
+                    levelMap.delete(i);
+                }
+            });
+
+
+            // 2. 滚动时高亮当前章节
+            function highlightTocLink() {
+                let activeLink = null;
+                const scrollOffset = 100; // 调整此值以提前高亮章节
+
+                for (let i = tocItems.length - 1; i >= 0; i--) {
+                    const item = tocItems[i];
+                    const rect = item.heading.getBoundingClientRect();
+                    
+                    if (rect.top <= window.innerHeight / 2 + scrollOffset && rect.bottom >= 0) {
+                        activeLink = item.link;
+                        break;
+                    }
+                }
+
+                tocItems.forEach(item => {
+                    if (item.link === activeLink) {
+                        item.link.classList.add('active');
+                    } else {
+                        item.link.classList.remove('active');
+                    }
+                });
+            }
+
+            window.addEventListener('scroll', highlightTocLink);
+            window.addEventListener('resize', highlightTocLink); // 窗口大小改变也更新
+            highlightTocLink(); // 页面加载时立即执行一次
+
+            // 3. 平滑滚动
+            tocList.addEventListener('click', (event) => {
+                if (event.target.tagName === 'A') {
+                    event.preventDefault(); // 阻止默认的跳转行为
+                    const targetId = event.target.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 80, // 调整滚动距离，留出顶部空间
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>
