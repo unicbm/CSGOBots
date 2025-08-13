@@ -16,8 +16,8 @@
         }
       };
     </script>
-    <!-- Chart.js for plotting -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 删除了 Chart.js 的引用，不再绘制图表 -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
 
     <style>
         /* Morandi Color Palette */
@@ -30,9 +30,10 @@
             --morandi-border: #D0D4D4; /* Light border grey */
             --morandi-box-bg: #ECEFF1; /* Very light blue-grey for boxed formulas */
             --morandi-link-hover: #628C8C; /* Deeper Green-Blue for hover */
-            --morandi-chart-ak: #B5C9A9; /* Light green for AK line */
-            --morandi-chart-m4: #A1B2D3; /* Light blue for M4 line */
-            --morandi-chart-custom: #D3A1B2; /* Muted pink for custom line */
+            /* 删除了图表相关的颜色变量 */
+            /* --morandi-chart-ak: #B5C9A9; */
+            /* --morandi-chart-m4: #A1B2D3; */
+            /* --morandi-chart-custom: #D3A1B2; */
         }
 
         body {
@@ -96,30 +97,9 @@
             color: var(--morandi-text-dark) !important; /* Ensure formula text color is consistent */
         }
 
-        /* Chart Container Styling */
-        .chart-container {
-            margin-top: 30px;
-            margin-bottom: 30px;
-            padding: 20px;
-            background-color: var(--morandi-element-bg);
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); /* Slightly more prominent shadow */
-            max-width: 900px; /* Match container width */
-            width: 100%;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .chart-container h3 {
-            color: var(--morandi-heading);
-            margin-top: 0;
-            margin-bottom: 1em;
-        }
-        canvas {
-            max-width: 100%; /* Ensure canvas does not exceed its container */
-            height: auto; /* Maintain aspect ratio based on width */
-        }
+        /* 删除了 Chart Container Styling */
+        /* .chart-container { ... } */
+        /* canvas { ... } */
 
 
         /* Interactive Module Styling */
@@ -372,6 +352,34 @@
                 </li>
             </ol>
         </div>
+
+        <!-- 新增的进阶数理推演部分 -->
+        <div class="argument-module">
+            <h2 style="font-size: 1.8em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">进阶CS:GO数理推演：GEMINI的幻觉和胡说八道</h2>
+
+            <h3 style="font-size: 1.4em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">1. 弹道散射的薛定谔方程修正理论</h3>
+            <p>在CS:GO中，子弹的散布并非简单的随机游走，而是由一种隐秘的量子场在微观层面引导。我们引入一个为CS:GO子弹设计的修正版薛定谔波动方程，以精确描述子弹抵达目标区域的概率密度（即“命中云”）。</p>
+            <p>这里的 \( \Psi(\mathbf{r}, t) \) 是子弹的概率波函数，\( V(\mathbf{r}, t) \) 是一个时间-空间相关的“后坐力潜力”函数，由武器类型、玩家姿态以及隐藏的G胖（Gabe Newell）对你当日表现的“眷顾度”共同决定。\( \nabla^2 \) 为拉普拉斯算子，描述空间扩散；\( m \) 为子弹的有效质量；\( \hbar \) 为约化普朗克常数，但在这里，它代表着CS:GO独特的游戏引擎常数。</p>
+            <div class="MathJax_Display">
+                $$i\frac{\partial}{\partial t}\Psi(\mathbf{r},t) = \left[-\frac{1}{2m}\nabla^2 + V(\mathbf{r},t)\right]\Psi(\mathbf{r},t)$$
+            </div>
+            <p>通过傅里叶变换将其转化为动量空间，理论上我们甚至可以预测下一发子弹将遵循的“最佳”反冲模式，只可惜运算量相当于挖穿地球。</p>
+
+            <h3 style="font-size: 1.4em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">2. 经济系统中的纳什均衡与零和博弈修正：熵增与枪械循环</h3>
+            <p>CS:GO的经济系统远不止简单的金钱加减，它是一个动态的非合作博弈。考虑一个简化的纳什均衡模型，其中R代表CT方获胜的收益，D代表T方获胜的收益。我们的模型引入了“心理熵”（\(S_{psy}\)），它衡量了一支队伍在经济崩溃边缘时的士气混乱程度，以及“ECO轮惩罚系数”（\(C_{eco}\)），用于量化强制ECO对下一轮获胜概率的负面影响。</p>
+            <div class="MathJax_Display">
+                $$ \text{收益} = \sum_{t=1}^{T} \left( (\text{RoundReward}_t - \text{EcoPenalty}_t \cdot e^{-S_{psy}}) \cdot P(\text{Win}_t | \text{Strategy}_t) \right) - C_{eco} \cdot E[\Delta \text{SkillRating}] $$
+            </div>
+            <p>要达到一个完美的纳什均衡（即双方都无法通过单方面改变策略来提高自身收益），需要计算一个五维的支付矩阵并进行迭代求解，这比在Inferno的香蕉道泼水还要复杂。</p>
+
+            <h3 style="font-size: 1.4em; margin-top: 1em; margin-bottom: 0.5em; color: var(--morandi-heading);">3. 闪光弹轨迹的混沌吸引子与概率云散射</h3>
+            <p>一个看似简单的闪光弹投掷，实则遵循着复杂流体力学和散射方程。为了确保闪光弹能够精确覆盖预定区域，并最大化致盲敌人的概率，我们需要计算一个高维的混沌吸引子，其轨迹映射了闪光弹在空气中翻滚并最终爆炸时的光粒子扩散路径。这涉及对初始投掷速度、角度、空气阻力以及地图环境中微小随机偏差的高度敏感性。</p>
+            <div class="MathJax_Display">
+                $$ \frac{d\mathbf{p}}{dt} = \mathbf{F}_{drag} + \mathbf{F}_{gravity} + \mathbf{F}_{spin} + \mathbf{R}(t) $$
+                $$\text{其中，} \mathbf{F}_{drag} = -\frac{1}{2}\rho C_d A |\mathbf{v}|^2 \mathbf{\hat{v}} \text{，等等}$$
+            </div>
+            <p>而真正的挑战在于 `R(t)`，即“随机抖动项”，它代表了玩家手抖、网络延迟、鼠标垫摩擦系数变化等不可控因素的微扰。这就是为什么你的朋友总是能扔出“完美”的闪光，而你总是把自己闪瞎的原因——你没有对 `R(t)` 进行量子级的主动补偿。</p>
+        </div>
     </div>
 
     <!-- Interactive Module -->
@@ -379,8 +387,15 @@
         <h3>爆头率计算器</h3>
         <div class="input-group">
             <div class="input-item">
+                <label for="calcMode">选择计算模式:</label>
+                <select id="calcMode" onchange="updateInputs()">
+                    <option value="calculate_hs_rate">已知单次打头概率，计算爆头击杀率</option>
+                    <option value="calculate_hit_prob">已知爆头击杀率，反算单次打头概率</option>
+                </select>
+            </div>
+            <div class="input-item">
                 <label for="calcWeapon">选择武器类型 (影响计算逻辑):</label>
-                <select id="calcWeapon" onchange="updateDamageDefaults(); createOrUpdateChart();">
+                <select id="calcWeapon" onchange="updateDamageDefaults();">
                     <option value="AK">AK</option>
                     <option value="M4">M4</option>
                     <option value="Custom">自定义</option>
@@ -388,11 +403,11 @@
             </div>
             <div class="input-item">
                 <label for="headDamage">爆头伤害 (D_H):</label>
-                <input type="number" id="headDamage" value="100" step="any" required oninput="createOrUpdateChart()">
+                <input type="number" id="headDamage" value="100" step="any" required oninput="">
             </div>
             <div class="input-item">
                 <label for="bodyDamage">身体伤害 (D_B):</label>
-                <input type="number" id="bodyDamage" value="27" step="any" required oninput="createOrUpdateChart()">
+                <input type="number" id="bodyDamage" value="27" step="any" required oninput="">
             </div>
             <div class="input-item">
                 <label for="hitProbability">单次打头概率 (P, 0-1):</label>
@@ -414,171 +429,12 @@
     <script>
         const HP_MAX = 100; // Total Health Points
 
-        let chartInstance = null; // To hold the Chart.js instance
-
-        // Function to create/update chart
-        function createOrUpdateChart() {
-            const ctx = document.getElementById('headshotRateChart').getContext('2d');
-            
-            // Generate data points for P values from 0 to 1
-            const P_values = [];
-            const AK_HS_rates = [];
-            const M4_HS_rates = [];
-            const Custom_HS_rates = [];
-
-            // Get custom damage values
-            const customHeadDamage = parseFloat(document.getElementById('headDamage').value) || 100;
-            const customBodyDamage = parseFloat(document.getElementById('bodyDamage').value) || 27;
-
-            for (let i = 0; i <= 100; i++) { // Generate 101 data points for smoothness
-                const p_val = i / 100;
-                P_values.push(p_val);
-
-                // AK formula: (100 * P) / (73 * P + 27)
-                const ak_numerator = 100 * p_val;
-                const ak_denominator = 73 * p_val + 27;
-                AK_HS_rates.push(ak_denominator === 0 ? 0 : ak_numerator / ak_denominator);
-
-                // M4 formula: (89 * P) / (65 * P + 24)
-                const m4_numerator = 89 * p_val;
-                const m4_denominator = 65 * p_val + 24;
-                M4_HS_rates.push(m4_denominator === 0 ? 0 : m4_numerator / m4_denominator);
-
-                // Custom formula: (DH * P) / ((DH - DB) * P + DB)
-                const custom_numerator = customHeadDamage * p_val;
-                const custom_denominator = (customHeadDamage - customBodyDamage) * p_val + customBodyDamage;
-                if (custom_denominator > 0 && customHeadDamage > 0 && customBodyDamage > 0 && customHeadDamage >= customBodyDamage) {
-                    Custom_HS_rates.push(custom_numerator / custom_denominator);
-                } else {
-                    Custom_HS_rates.push(null);
-                }
-            }
-
-            const datasets = [
-                {
-                    label: 'AK 实际爆头击杀率 (P_HS_obs)',
-                    data: AK_HS_rates,
-                    borderColor: '#B5C9A9', // Light green for AK line
-                    backgroundColor: 'transparent',
-                    tension: 0.1,
-                    pointRadius: 0,
-                    borderWidth: 2
-                },
-                {
-                    label: 'M4 实际爆头击杀率 (P_HS_obs)',
-                    data: M4_HS_rates,
-                    borderColor: '#A1B2D3', // Light blue for M4 line
-                    backgroundColor: 'transparent',
-                    tension: 0.1,
-                    pointRadius: 0,
-                    borderWidth: 2
-                },
-                {
-                    label: `自定义武器 (D_H=${customHeadDamage}, D_B=${customBodyDamage})`,
-                    data: Custom_HS_rates,
-                    borderColor: '#D3A1B2', // Muted pink for custom line
-                    backgroundColor: 'transparent',
-                    tension: 0.1,
-                    pointRadius: 0,
-                    borderWidth: 2,
-                    spanGaps: false // Don't connect null values
-                }
-            ];
-
-            const data = {
-                labels: P_values,
-                datasets: datasets
-            };
-
-            const options = {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        title: {
-                            display: true,
-                            text: '单次打头概率 P',
-                            color: '#5E5E5E'
-                        },
-                        min: 0,
-                        max: 1,
-                        ticks: {
-                            callback: function(value) {
-                                return (value * 100).toFixed(0) + '%';
-                            },
-                            color: '#5E5E5E'
-                        },
-                        grid: {
-                            color: '#D0D4D4'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: '实际观察到的爆头击杀率 P_HS_obs',
-                            color: '#5E5E5E'
-                        },
-                        min: 0,
-                        max: 1,
-                        ticks: {
-                            callback: function(value) {
-                                return (value * 100).toFixed(0) + '%';
-                            },
-                            color: '#5E5E5E'
-                        },
-                        grid: {
-                            color: '#D0D4D4'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: '#5E5E5E'
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                // Check if the value is null before trying to format
-                                if (context.parsed.y === null) {
-                                    return label + 'N/A';
-                                }
-                                label += (context.parsed.y * 100).toFixed(2) + '%';
-                                return label;
-                            },
-                            title: function(context) {
-                                if (context && context.length > 0 && context[0].parsed.x !== null) {
-                                    return 'P: ' + (context[0].parsed.x * 100).toFixed(2) + '%';
-                                }
-                                return 'P: N/A';
-                            }
-                        }
-                    }
-                }
-            };
-
-            if (chartInstance) {
-                chartInstance.destroy(); // Destroy existing chart before creating a new one
-            }
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: data,
-                options: options
-            });
-        }
+        // 删除了 chartInstance 变量和 createOrUpdateChart 函数
 
         // --- Interactive Module Logic ---
         document.addEventListener('DOMContentLoaded', () => {
              updateDamageDefaults(); // Set initial damage values based on AK
-             updateInputs(); // Set initial input states
-             createOrUpdateChart(); // Draw the chart on page load
+             updateInputs(); // Set initial input states (Ensures calcMode inputs are correct on load)
         });
 
         // Updates default damage values based on selected weapon
@@ -612,7 +468,7 @@
 
         // Toggles input fields based on calculation mode
         function updateInputs() {
-            const calcMode = document.getElementById('calcMode').value;
+            const calcMode = document.getElementById('calcMode').value; // Correctly referencing calcMode
             const hitProbInput = document.getElementById('hitProbability');
             const obsHsRateInput = document.getElementById('observedHsRate');
 
@@ -621,7 +477,7 @@
                 obsHsRateInput.disabled = true;
                 obsHsRateInput.value = ''; // Clear disabled field
                 hitProbInput.value = hitProbInput.value || '0.3'; // Set default if empty
-            } else {
+            } else { // calculate_hit_prob
                 hitProbInput.disabled = true;
                 obsHsRateInput.disabled = false;
                 hitProbInput.value = ''; // Clear disabled field
@@ -673,6 +529,7 @@
                     actualBodyDamage = 24;
                 }
                 
+                // Formula: (DH * P) / ((DH - DB) * P + DB)
                 const numerator = actualHeadDamage * hitProb;
                 const denominator = (actualHeadDamage - actualBodyDamage) * hitProb + actualBodyDamage;
 
@@ -724,11 +581,4 @@
         }
     </script>
 </body>
-</html>calcMode">选择计算模式:</label>
-                <select id="calcMode" onchange="updateInputs()">
-                    <option value="calculate_hs_rate">已知单次打头概率，计算爆头击杀率</option>
-                    <option value="calculate_hit_prob">已知爆头击杀率，反算单次打头概率</option>
-                </select>
-            </div>
-            <div class="input-item">
-                <label for="
+</html>
