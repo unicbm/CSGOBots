@@ -1,386 +1,371 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSGOBots - 内容导航</title>
-    <style>
-        /* 莫兰迪配色方案 - 浅色模式（默认）*/
-        :root {
-            --primary-text-color: #495057; /* 主要文本颜色 */
-            --background-color: #F0F2F5; /* 外部背景色 */
-            --container-bg: #FFFFFF; /* 内容容器背景色 */
-            --header-color: #6A8EAE; /* 标题颜色 */
-            --border-color: #CBD2D8; /* 分隔线和边框颜色 */
-            --link-color: #B29DA3; /* 普通链接颜色 */
-            --link-hover-bg: #E0E7EB; /* 链接悬停背景色 */
-            --link-hover-text: var(--header-color); /* 链接悬停文本颜色 */
-            --description-color: #777; /* 描述文本颜色 */
-            --avatar-frame-bg: #004d7a; /* 头像框背景色 */
-            --visit-counter-color: #666; /* 访问计数器颜色 */
-            --visit-strong-color: #007bb5; /* 访问计数器数字颜色 */
-            --footer-text-color: #777; /* 页脚文本颜色 */
-            --footer-strong-color: #555; /* 页脚强调文本颜色 */
-            --theme-button-bg: #6A8EAE; /* 主题切换按钮背景 */
-            --theme-button-text: white; /* 主题切换按钮文本 */
-        }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CSGOBots · 星空极简版</title>
+<style>
+  /* CSS 变量定义：保持整体深色调的星空风格 */
+  :root{
+    --fg:#fff; /* 前景色（主要文本） */
+    --muted:#aaa; /* 柔和色（次要文本，如描述） */
+    --line:rgba(255,255,255,0.15); /* 分隔线和边框颜色，略亮于之前 */
+    --btn-bg:#fff; /* 按钮背景（未使用，但保留） */
+    --btn-fg:#000; /* 按钮前景色（未使用，但保留） */
+    --radius:18px; /* 圆角半径 */
+    --content-w:1120px; /* 内容最大宽度 */
+    --ease:cubic-bezier(.2,.8,.2,1); /* 动画缓动函数 */
+  }
 
-        /* 深色模式 */
-        .dark-mode {
-            --primary-text-color: #E2E2E2;
-            --background-color: #282C34;
-            --container-bg: #3C424E;
-            --header-color: #B4C6D4;
-            --border-color: #555B6E;
-            --link-color: #9C8998;
-            --link-hover-bg: #4A505D;
-            --link-hover-text: var(--header-color);
-            --description-color: #BBB;
-            --avatar-frame-bg: #003657;
-            --visit-counter-color: #AAA;
-            --visit-strong-color: #5a9cb8;
-            --footer-text-color: #A9A9A9;
-            --footer-strong-color: #CCC;
-            --theme-button-bg: #555B6E;
-            --theme-button-text: #E2E2E2;
-        }
+  html,body{
+    height:100%; /* 高度占满视口 */
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Arial,"Noto Sans",sans-serif;
+    background:transparent; /* 允许 Canvas 背景透出 */
+    color:var(--fg); /* 文本颜色 */
+    overflow-x:hidden; /* 防止水平滚动条出现 */
+  }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background-color: var(--background-color);
-            color: var(--primary-text-color);
-            line-height: 1.6;
-            position: relative;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-        
-        /* 左上角头像 */
-        .avatar-frame {
-            position: absolute;
-            top: 30px;
-            left: 30px;
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            border: 4px solid var(--container-bg); /* 和内容容器背景色一致的边框 */
-            z-index: 100;
-            background-color: var(--avatar-frame-bg);
-            transition: background-color 0.3s ease, border-color 0.3s ease;
-        }
+  /* 星空画布 */
+  #bgCanvas{
+    position:fixed; /* 固定定位，铺满整个页面 */
+    inset:0; /* 上下左右都为0，铺满 */
+    z-index:-1; /* 确保在所有内容之下 */
+    background:#000; /* 作为 Canvas 动画未加载前的备用背景 */
+  }
 
-        /* 主题切换按钮 */
-        .theme-switch {
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            z-index: 100;
-        }
-        .theme-switch button {
-            background-color: var(--theme-button-bg);
-            color: var(--theme-button-text);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
-        }
-        .theme-switch button:hover {
-            opacity: 0.9;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        }
+  /* 导航栏 */
+  .nav{
+    position:sticky; /* 粘性定位，滚动时停留在顶部 */
+    top:0;
+    z-index:1000; /* 确保在最上层 */
+    width:100%;
+    transition:background-color .35s var(--ease); /* 背景色过渡动画 */
+    background:transparent; /* 默认透明，显示星空 */
+  }
+  .nav.scrolled{
+    background:rgba(0,0,0,0.6); /* 滚动后半透明黑色背景 */
+    backdrop-filter: blur(6px); /* 背景模糊效果 */
+  }
+  .nav-inner{
+    margin:0 auto; /* 居中 */
+    max-width:var(--content-w); /* 限制最大宽度 */
+    display:flex; /* Flex布局 */
+    align-items:center;
+    justify-content:space-between; /* 左右两端对齐 */
+    padding:14px 20px;
+  }
+  .brand{
+    font-weight:700;
+    letter-spacing:.4px;
+    font-size:18px;
+  }
+  .links{
+    display:flex;
+    gap:28px; /* 链接间距 */
+    align-items:center;
+  }
+  .links a{
+    position:relative;
+    text-decoration:none;
+    color:var(--fg);
+    font-size:15px;
+    padding:6px 2px;
+  }
+  .links a:after{
+    content:"";
+    position:absolute;
+    left:0;
+    bottom:-2px;
+    height:1px;
+    width:0%;
+    background:currentColor; /* 下划线颜色与文本颜色一致 */
+    transition:width .25s var(--ease); /* 宽度过渡动画 */
+  }
+  .links a:hover:after{ width:100%; } /* 悬停时下划线展开 */
 
-        .container {
-            background-color: var(--container-bg);
-            padding: 40px 60px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            text-align: center; /* 标题和介绍居中 */
-            max-width: 800px;
-            width: 90%;
-            position: relative;
-            z-index: 1;
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        h1 {
-            color: var(--header-color);
-            margin-bottom: 25px;
-            font-size: 2.8em;
-            letter-spacing: 1px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
-            transition: color 0.3s ease;
-        }
-        h2 {
-            color: var(--header-color);
-            margin-top: 35px;
-            margin-bottom: 20px;
-            font-size: 1.8em;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
-            display: inline-block; /* 让下划线只包裹文本 */
-            transition: color 0.3s ease, border-color 0.3s ease;
-        }
-        p {
-            font-size: 1.15em;
-            margin-bottom: 30px;
-            color: var(--primary-text-color);
-            transition: color 0.3s ease;
-        }
-        nav ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            text-align: left; /* 目录列表左对齐 */
-        }
-        nav li {
-            margin-bottom: 15px; /* 列表项间距 */
-        }
-        /* 一级目录链接 */
-        nav > ul > li > a {
-            text-decoration: none;
-            color: var(--link-color); /* 主链接颜色 */
-            font-size: 1.25em;
-            font-weight: bold;
-            padding: 8px 15px; /* 增加点击区域 */
-            display: block; /* 占据整行，方便点击和高亮 */
-            border-radius: 5px; /* 略带圆角 */
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        nav > ul > li > a:hover {
-            background-color: var(--link-hover-bg);
-            color: var(--link-hover-text);
-        }
+  /* 内容区 */
+  .section{
+    max-width:var(--content-w); /* 限制最大宽度 */
+    margin:120px auto; /* 上下外边距，左右居中 */
+    padding:0 20px;
+    background: rgba(0,0,0,0.15); /* 略微调亮半透明黑色背景，提供对比度 */
+    border-radius: var(--radius); /* 与卡片保持风格一致 */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* 增加一点阴影，让内容更浮出 */
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  .section h2{
+    font-size: clamp(28px, 4vw, 40px); /* 响应式字体大小 */
+    margin:0 0 16px;
+  }
+  .lead{
+    color:var(--muted);
+    margin:0 0 32px;
+    font-size:18px;
+  }
 
-        /* 描述文字样式 */
-        nav p {
-            font-size: 0.9em;
-            color: var(--description-color);
-            margin-top: 5px;
-            margin-bottom: 0; /* 修正为0，让描述紧跟链接 */
-            padding-left: 15px; /* 与链接对齐 */
-            line-height: 1.4;
-            transition: color 0.3s ease;
-        }
+  /* 卡片 */
+  .grid{
+    display:grid; /* 网格布局 */
+    gap:18px; /* 网格间距 */
+    grid-template-columns: repeat(12, 1fr); /* 12列 */
+  }
+  .card{
+    grid-column: span 12; /* 默认占据12列（全宽） */
+    border:1px solid var(--line); /* 边框颜色 */
+    border-radius:var(--radius);
+    padding:24px;
+    background:rgba(255,255,255,0.05); /* 半透明白色背景 */
+    transition:transform .35s var(--ease), background .35s var(--ease); /* 动画效果 */
+  }
+  .card:hover{
+    transform:translateY(-2px); /* 悬停时上浮 */
+    background:rgba(255,255,255,0.1); /* 悬停时背景更亮 */
+  }
+  .card a.title-link{
+    text-decoration:none;
+    color:var(--fg);
+    font-weight:700;
+    font-size:20px;
+  }
+  .card p{
+    color:var(--muted);
+    margin:8px 0 0;
+  }
 
-        /* 二级目录 (sub-menu) */
-        nav li ul.sub-menu {
-            list-style: none;
-            margin-top: 10px;
-            margin-left: 30px; /* 缩进 */
-            border-left: 2px solid var(--border-color); /* 左侧指示线 */
-            padding-left: 15px;
-            transition: border-color 0.3s ease;
-        }
-        nav li ul.sub-menu > li > a {
-            font-size: 1.1em; /* 略小 */
-            padding: 6px 12px;
-            color: var(--primary-text-color); /* 二级链接颜色 */
-        }
-        nav li ul.sub-menu > li > a:hover {
-             background-color: var(--link-hover-bg);
-             color: var(--link-hover-text);
-        }
+  /* 响应式卡片布局 */
+  @media (min-width:720px){
+    .card.span-6{ grid-column: span 6; } /* 720px以上占据6列 */
+  }
+  @media (min-width:1024px){
+    .card.span-4{ grid-column: span 4; } /* 1024px以上占据4列 */
+  }
 
-        /* 三级目录 (sub-sub-menu) */
-        nav li ul.sub-menu ul.sub-sub-menu {
-            list-style: none;
-            margin-top: 8px;
-            margin-left: 30px; /* 进一步缩进 */
-            border-left: 2px solid var(--border-color); /* 左侧指示线 */
-            padding-left: 15px;
-            transition: border-color 0.3s ease;
-        }
-        nav li ul.sub-menu ul.sub-sub-menu li a {
-            font-size: 1.0em; /* 最小 */
-            padding: 4px 10px;
-            color: var(--primary-text-color); /* 三级链接颜色 */
-        }
-        nav li ul.sub-menu ul.sub-sub-menu li a:hover {
-            background-color: var(--link-hover-bg);
-            color: var(--link-hover-text);
-        }
+  /* 子列表 */
+  .sublist{
+    margin-top:14px;
+    padding-top:10px;
+    border-top:1px dashed var(--line); /* 虚线分隔 */
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .subitem a{
+    color:var(--fg);
+    text-decoration:none;
+    font-weight:600;
+    position:relative;
+    padding-bottom:4px;
+  }
+  .subitem a:after{
+    content:"";
+    position:absolute;
+    left:0;
+    bottom:0;
+    height:1px;
+    width:0%;
+    background:currentColor;
+    transition:width .25s var(--ease);
+  }
+  .subitem a:hover:after{ width:100%; }
+  .subitem p{
+    color:var(--muted);
+    margin:4px 0 0;
+    font-size:14px;
+  }
 
-        /* 访问计数器样式 */
-        .visit-counter {
-            margin-top: 20px;
-            font-size: 1em;
-            color: var(--visit-counter-color);
-            text-align: center;
-            transition: color 0.3s ease;
-        }
-        .visit-counter strong {
-            color: var(--visit-strong-color);
-            font-size: 1.1em;
-            transition: color 0.3s ease;
-        }
+  /* 动画类 */
+  .reveal{
+    opacity:0;
+    transform: translateY(16px);
+    transition: opacity .7s var(--ease), transform .7s var(--ease);
+  }
+  .reveal.show{
+    opacity:1;
+    transform: translateY(0);
+  }
 
-        /* 底部页脚（作者和版权） */
-        .footer {
-            margin-top: 50px;
-            font-size: 0.9em;
-            color: var(--footer-text-color);
-            text-align: center;
-            padding-bottom: 20px;
-            transition: color 0.3s ease;
-        }
-        .footer span {
-            font-weight: bold;
-            color: var(--footer-strong-color);
-            transition: color 0.3s ease;
-        }
-
-        /* 小屏幕适配 */
-        @media (max-width: 768px) {
-            body {
-                padding: 20px;
-            }
-            .avatar-frame {
-                top: 20px;
-                left: 20px;
-                width: 70px;
-                height: 70px;
-            }
-            .theme-switch {
-                top: 20px;
-                right: 20px;
-            }
-            .container {
-                padding: 30px 20px;
-                margin-top: 70px; /* 防止内容被头像和按钮遮挡 */
-            }
-            h1 {
-                font-size: 2.2em;
-            }
-            h2 {
-                font-size: 1.5em;
-            }
-            nav li ul.sub-menu,
-            nav li ul.sub-menu ul.sub-sub-menu {
-                margin-left: 15px;
-                padding-left: 10px;
-            }
-            nav p {
-                padding-left: 10px;
-            }
-            .footer {
-                font-size: 0.8em;
-            }
-        }
-    </style>
+  /* 页脚 */
+  footer{
+    max-width:var(--content-w);
+    margin:80px auto 40px;
+    padding:0 20px;
+    color:var(--muted);
+    text-align:center;
+  }
+  .meta{
+    border-top:1px solid var(--line);
+    padding-top:16px;
+    margin-top:20px;
+    font-size:14px;
+  }
+</style>
 </head>
 <body>
-    <!-- 左上角头像 -->
-    <div class="avatar-frame"></div>
+<canvas id="bgCanvas"></canvas>
 
-    <!-- 顶部主题切换按钮 -->
-    <div class="theme-switch">
-        <button id="theme-toggle">切换主题</button>
-    </div>
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <div class="brand">UNI</div>
+    <nav class="links">
+      <a href="#explore">内容</a>
+      <a href="#about">关于</a>
+    </nav>
+  </div>
+</header>
 
-    <div class="container">
-        <h1>欢迎访问 CSGOBots 项目！</h1>
-        <p>这里收集了关于 Counter-Strike: Global Offensive 中 BOTs 的相关内容和技术细节。无论您是想调整 BOT 行为，还是深入研究其工作原理，都能在这里找到有用的信息。</p>
+<section class="section reveal" id="explore">
+  <h2>探索内容</h2>
+  <p class="lead">从行为配置到源码改造，这里集中呈现你需要的入口。</p>
+  <div class="grid">
+    <article class="card span-6">
+      <a class="title-link" href="botprofile.html">BOTprofile：视角与行为参数</a>
+      <p>了解如何通过 Botprofile 文件调整 BOT 的反应速度、精度和移动模式。</p>
+    </article>
 
-        <nav>
-            <h2>探索内容：</h2>
-            <ul>
-                <li>
-                    <a href="botprofile.html">BOTprofile：视角与行为参数</a>
-                    <p>了解如何通过 Botprofile 文件调整 BOT 的反应速度、精度和移动模式。</p>
-                </li>
-                <li>
-                    <!-- 插件分类入口 -->
-                    <a href="#">CSGOBetterbots 插件：功能增强核心</a>
-                    <p>深入了解 SourcePawn 插件，提升 BOT 游戏体验和智能。</p>
-                    <ul class="sub-menu">
-                        <!-- 新增的 BOT 物品栏插件链接 -->
-                        <li><a href="botstuff_inventory_note.html">库存控制：bot_inventory</a>
-                            <p>为 BOT 随机分配武器皮肤、手套、音乐盒和特工模型，提升视觉体验。</p>
-                        </li>
-                        <!-- 新增的 BOT 智能行为插件链接 -->
-                        <li><a href="botstuff_note.html">智能核心：bot_stuff</a>
-                            <p>改善 BOT 的购买策略、投掷物使用、瞄准和走位等 AI 行为。</p>
-                        </li>
-                        <!-- 原有的 Betterbots 插件及其子链接现在移到这里 -->
-                        <li><a href="botstuff.html">如何修改 bot_stuff 源码</a>
-                            <p>深入代码分析，实现对 BOT 行为的精细控制。</p>
-                            <ul class="sub-sub-menu">
-                                <li><a href="botstuff_hs.html">修改 BOT 爆头率详解</a>
-                                    <p>一步步教你如何调整 BOT 爆头率的参数。</p>
-                                </li>
-                                <li><a href="botstuff_hs_calc.html">爆头率的数学原理与计算</a>
-                                    <p>深入理解 BOT 爆头率背后的数学模型和计算方式。</p>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-                <!-- 您可以在这里继续添加其他内容链接，依照结构添加 sub-menu 或 sub-sub-menu -->
-            </ul>
-        </nav>
-
-        <!-- 访问计数器显示区域 -->
-        <div class="visit-counter">
-            本页已被您访问 <strong><span id="visitCount">0</span></strong> 次。
+    <article class="card span-6">
+      <a class="title-link" href="#">CSGOBetterbots</a>
+      <p>深入了解 SourcePawn 插件，提升 BOT 游戏体验和智能。</p>
+      <div class="sublist">
+        <div class="subitem">
+          <a href="botstuff_inventory_note.html">库存：bot_inventory</a>
+          <p>为 BOT 分配武器皮肤、手套、音乐盒和特工模型。</p>
         </div>
+        <div class="subitem">
+          <a href="botstuff_note.html">Core：bot_stuff</a>
+          <p>改善 BOT 的购买策略、投掷物使用、瞄准和走位。</p>
+        </div>
+        <div class="subitem">
+          <a href="botstuff.html">如何修改 bot_stuff 源码</a>
+          <p>深入代码分析，实现精细控制。</p>
+        </div>
+        <div class="subitem">
+          <a href="botstuff_hs.html">修改 BOT 爆头率详解</a>
+          <p>调整爆头率的参数。</p>
+        </div>
+        <div class="subitem">
+          <a href="botstuff_hs_calc.html">爆头率的数学原理与计算</a>
+          <p>理解爆头率背后的数学模型。</p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
 
-    </div>
+<section class="section reveal" id="about">
+  <h2>关于项目</h2>
+  <p class="lead">CSGOBots 聚焦于提升 BOT 的智能与乐趣，文档清晰、示例充分，助你快速上手改造。</p>
+</section>
 
-    <!-- 底部页脚 -->
-    <footer class="footer">
-        <p>&copy; 2025 CSGOBots. All rights reserved. Made by <span>un1</span> powered by Gemini.</p>
-    </footer>
+<footer class="reveal">
+  <div>作者：un1 · Powered by GPT-5 & Gemini</div>
+  <div class="meta">&copy; 2025 All rights reserved.</div>
+</footer>
 
-    <script>
-        // -------- 主题切换逻辑 --------
-        const themeToggle = document.getElementById('theme-toggle');
-        const htmlElement = document.documentElement;
+<script>
+/* 彩色渐变科幻星空背景动画*/
+const canvas=document.getElementById("bgCanvas"),ctx=canvas.getContext("2d");
+let w,h,stars=[];
 
-        // 应用主题的函数
-        function applyTheme(theme) {
-            if (theme === 'dark') {
-                htmlElement.classList.add('dark-mode');
-                themeToggle.textContent = '切换至浅色模式';
-            } else {
-                htmlElement.classList.remove('dark-mode');
-                themeToggle.textContent = '切换至深色模式';
-            }
-        }
+// 调整Canvas大小以适应窗口
+function resize(){
+  w=canvas.width=window.innerWidth;
+  h=canvas.height=window.innerHeight;
+}
+window.addEventListener("resize",resize); // 监听窗口大小变化
+resize(); // 初始化Canvas大小
 
-        // 检查本地存储中是否有主题偏好，没有则默认浅色
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        applyTheme(savedTheme); // 页面加载时应用保存的主题
+// 初始化单个星星数据（用于首次生成和重置）
+function createStar(){
+  // 调整 x,y 的随机范围，使其能在屏幕边缘生成，减少中心集中感
+  // Z 也更随机一些，减少整齐的飞行感
+  return {
+    x: (Math.random() - 0.5) * w * 1.5, // 扩展初始 X 范围
+    y: (Math.random() - 0.5) * h * 1.5, // 扩展初始 Y 范围
+    z: Math.random() * w,    // Z坐标 (模拟深度)
+    // **** 颜色优化：限制到蓝白到黄的色温范围，降低饱和度 ****
+    // HUE (色相) 范围：例如 180-240 (蓝), 0-60 (红黄). 这里取一个更自然发白的范围
+    // 比如 40-70 为暖白，190-220 为冷白。
+    // 我们用一个组合：随机取一个偏向蓝色的 HUE 或偏向黄色的 HUE
+    color: (() => {
+      const hueBase = Math.random() < 0.5 ? 200 : 50; // 50 (黄橙) 或 200 (蓝)
+      const hueVariation = (Math.random() - 0.5) * 30; // 随机 ±15 变化
+      const saturation = Math.floor(Math.random() * 20) + 30; // 30%-50% 饱和度
+      const lightness = Math.floor(Math.random() * 20) + 70; // 70%-90% 亮度
+      return `hsl(${hueBase + hueVariation}, ${saturation}%, ${lightness}%)`;
+    })()
+  };
+}
 
-        // 监听按钮点击事件
-        themeToggle.addEventListener('click', () => {
-            let currentTheme = htmlElement.classList.contains('dark-mode') ? 'dark' : 'light';
-            let newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            applyTheme(newTheme);
-            localStorage.setItem('theme', newTheme); // 保存新主题偏好
-        });
+// 初始化星星数据
+function initStars(count=200){ // 星星数量可调
+  stars=[];
+  for(let i=0;i<count;i++){
+    stars.push(createStar());
+  }
+}
 
-        // -------- 访问计数器逻辑 --------
-        let pageVisits = localStorage.getItem('csgobots_page_visits');
-        if (pageVisits) {
-            pageVisits = parseInt(pageVisits) + 1; // 转换为数字并加1
-        } else {
-            pageVisits = 1; // 第一次访问
-        }
+// 动画核心函数
+function animate(){
+  ctx.clearRect(0,0,w,h); // 每帧清除Canvas
 
-        // 更新 localStorage
-        localStorage.setItem('csgobots_page_visits', pageVisits);
+  // 绘制背景渐变云雾 (与上次相同，亮度保持在 10%/15%)
+  const grad=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,w/1.2); 
+  const time=Date.now()*0.0001;
+  grad.addColorStop(0,`hsl(${(time*200)%360},50%,10%)`); // 中心颜色
+  grad.addColorStop(1,`hsl(${(time*200+120)%360},50%,15%)`); // 边缘颜色
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,w,h);
 
-        // 更新页面上的显示
-        document.getElementById('visitCount').textContent = pageVisits;
-    </script>
+  // 绘制星星
+  for(let i=0;i<stars.length;i++){
+    let s=stars[i];
+    s.z-=2; // Z坐标逐渐减小，模拟星星向观察者移动
+
+    // 如果星星Z坐标小于等于0（到达观察者），重新初始化其位置
+    if(s.z<=0){
+      // 使用新的 createStar 逻辑重新生成这颗星
+      stars[i] = createStar(); 
+      s = stars[i]; // 确保 s 引用的是新对象
+    }
+
+    // 计算2D投影坐标 (简单的透视投影)
+    // 调整 k 值，使透视效果更自然，没那么“集中”
+    const perspectiveFactor = 500; // 这个值越大，透视感越强，星星越集中
+    let k = perspectiveFactor / s.z; 
+    let px = s.x * k + w/2;
+    let py = s.y * k + h/2;
+
+    // 检查星星是否在 Canvas 范围内 (略微扩大检查范围，防止边缘突然消失)
+    if(px < -w/2 || px > w*1.5 || py < -h/2 || py > h*1.5) continue;
+
+    // 大小随距离变化，越近越大，调整最大/最小尺寸
+    let size = (1 - s.z/w) * 2 + 0.5; // 确保最小尺寸为 0.5
+    ctx.fillStyle=s.color;
+    ctx.beginPath();
+    ctx.arc(px,py,size,0,Math.PI*2);
+    ctx.fill();
+  }
+  requestAnimationFrame(animate); // 请求下一帧动画
+}
+initStars(); // 初始化星星
+animate(); // 启动动画
+
+/* 导航滚动效果 */
+const nav=document.getElementById('nav');
+document.addEventListener('scroll',()=>{
+  if(window.scrollY>24){nav.classList.add('scrolled');}
+  else{nav.classList.remove('scrolled');}
+});
+
+/* 进入视口渐入 (Reveal) 动画 */
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    // 如果元素进入视口，则添加 'show' 类，并停止观察
+    if(e.isIntersecting){e.target.classList.add('show');io.unobserve(e.target);}
+  });
+},{threshold:.1}); // 元素10%进入视口时触发
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el)); // 观察所有带有 'reveal' 类的元素
+</script>
 </body>
 </html>
