@@ -3,72 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSGOBots - 欢迎页面</title>
+    <title>CSGOBots - 内容导航</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 40px; /* 整体内容的内边距 */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: calc(100vh - 80px); /* Adjust for margin */
-            background-color: #f4f4f4;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e0eff1 0%, #d4e7f3 100%);
             color: #333;
+            line-height: 1.6;
+            position: relative; /* 为头像的绝对定位提供参考 */
         }
+        
+        /* 左上角头像 */
+        .avatar-frame {
+            position: absolute; /* 绝对定位 */
+            top: 30px; /* 距离顶部 */
+            left: 30px; /* 距离左侧 */
+            width: 90px; /* 头像框宽度 */
+            height: 90px; /* 头像框高度 */
+            border-radius: 50%; /* 变成圆形 */
+            overflow: hidden; /* 隐藏超出部分 */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* 阴影效果 */
+            border: 4px solid #fff; /* 白色边框，增强高级感 */
+            z-index: 100; /* 确保在最上层 */
+            background-color: #f0f0f0; /* 备用背景色 */
+        }
+        .avatar-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 确保图片完整填充且不变形 */
+            display: block;
+        }
+
         .container {
             background-color: #ffffff;
-            padding: 30px 50px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 40px 60px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
             text-align: center;
+            max-width: 800px;
+            width: 90%;
+            position: relative; /* 确保内容在头像之下 */
+            z-index: 1; /* 比头像低一点，确保头像在最上层 */
         }
         h1 {
             color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 2.8em;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 35px;
             margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 2px solid #aecde2;
+            padding-bottom: 10px;
+            display: inline-block;
         }
         p {
-            font-size: 1.1em;
-            margin-bottom: 25px;
+            font-size: 1.15em;
+            margin-bottom: 30px;
+            color: #555;
         }
-        ul {
+        nav ul {
             list-style: none;
             padding: 0;
-            margin-top: 30px;
+            margin: 0;
+            text-align: left;
         }
-        li {
-            margin-bottom: 15px;
+        nav li {
+            margin-bottom: 18px;
+            position: relative;
+        }
+        nav li ul {
+            margin-top: 10px;
+            margin-left: 30px;
+            border-left: 2px solid #e0e0e0;
+            padding-left: 15px;
+        }
+        nav li ul li {
+            margin-bottom: 10px;
         }
         a {
             text-decoration: none;
-            color: #3498db;
-            font-size: 1.2em;
+            color: #007bb5;
+            font-size: 1.25em;
             font-weight: bold;
-            padding: 10px 20px;
-            border: 2px solid #3498db;
-            border-radius: 5px;
+            padding: 12px 25px;
+            border: 2px solid #007bb5;
+            border-radius: 8px;
             transition: all 0.3s ease;
-            display: inline-block; /* Make the padding apply evenly */
+            display: inline-block;
+            min-width: 250px;
+            text-align: center;
+            box-sizing: border-box;
         }
         a:hover {
-            background-color: #3498db;
+            background-color: #007bb5;
             color: white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 5px 15px rgba(0, 123, 181, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* 针对子菜单链接的样式微调 */
+        nav li ul li a {
+            font-size: 1.1em;
+            padding: 8px 15px;
+            min-width: unset;
+            border-color: #6facdb;
+            color: #4a6fa8;
+        }
+        nav li ul li a:hover {
+            background-color: #6facdb;
+            color: white;
+            box-shadow: 0 2px 8px rgba(111, 172, 219, 0.3);
+        }
+
+        /* 底部页脚（作者和版权） */
+        .footer {
+            margin-top: 50px; /* 距离上方内容的间距 */
+            font-size: 0.9em;
+            color: #777;
+            text-align: center;
+            padding-bottom: 20px; /* 底部内边距 */
+        }
+        .footer span {
+            font-weight: bold;
+            color: #555;
+        }
+
+        /* 小屏幕适配 */
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            .avatar-frame {
+                top: 20px;
+                left: 20px;
+                width: 70px;
+                height: 70px;
+            }
+            .container {
+                padding: 30px 20px;
+                margin-top: 70px; /* 防止内容被头像遮挡 */
+            }
+            h1 {
+                font-size: 2.2em;
+            }
+            h2 {
+                font-size: 1.5em;
+            }
+            p {
+                font-size: 1em;
+            }
+            a {
+                font-size: 1em;
+                padding: 10px 15px;
+                min-width: unset;
+                width: 100%;
+            }
+            nav li ul {
+                margin-left: 15px;
+            }
+            .footer {
+                font-size: 0.8em;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>欢迎访问CSBOT！</h1>
-        <p>这里有一些关于 CSGO BOT的内容。请选择您感兴趣的部分：</p>
-        <ul>
-            <li>
-                <a href="botprofile.html">研究Botprofile</a>
-            </li>
-            <li>
-                <a href="botstuff.html">研究Betterbots插件</a>
-            </li>
-        </ul>
+    <!-- 左上角头像 - 使用 URL -->
+    <div class="avatar-frame">
+        <img src="https://c-ssl.dtstatic.com/uploads/blog/202008/11/20200811102143_sfkcj.thumb.400_0.jpg" alt="CSGOBots Project Author Profile Picture">
     </div>
+
+    <div class="container">
+        <h1>欢迎访问 CSGOBots 项目！</h1>
+        <p>这里收集了关于 Counter-Strike: Global Offensive 中 BOTs 的相关内容和技术细节。无论您是想调整 BOT 行为，还是深入研究其工作原理，都能在这里找到有用的信息。</p>
+
+        <nav>
+            <h2>探索内容：</h2>
+            <ul>
+                <li>
+                    <a href="botprofile.html">深入理解 Botprofile (BOT 视角与行为参数)</a>
+                    <p style="font-size: 0.9em; color: #777; margin-top: 5px; margin-bottom: 0;">了解如何通过 Botprofile 文件调整 BOT 的反应速度、精度和移动模式。</p>
+                </li>
+                <li>
+                    <a href="botstuff.html">Betterbots 插件 (Botstuff) 简介</a>
+                    <p style="font-size: 0.9em; color: #777; margin-top: 5px; margin-bottom: 0;">探索强大的 Betterbots 插件，实现对 BOT 行为的精细控制。</p>
+                    <ul class="sub-menu">
+                        <li><a href="botstuff_hs.html">修改 BOT 爆头率详解</a>
+                            <p style="font-size: 0.85em; color: #888; margin-top: 2px; margin-bottom: 0;">一步步教你如何调整 BOT 爆头率的参数。</p>
+                        </li>
+                        <li><a href="botstuff_hs_calc.html">爆头率的数学原理与计算</a>
+                            <p style="font-size: 0.85em; color: #888; margin-top: 2px; margin-bottom: 0;">深入理解 BOT 爆头率背后的数学模型和计算方式。</p>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- 底部页脚 -->
+    <footer class="footer">
+        <p>&copy; 2025 CSGOBots. All rights reserved. Made by <span>UN1</span> powered by Gemini.</p>
+    </footer>
 </body>
 </html>
