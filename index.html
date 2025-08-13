@@ -20,7 +20,7 @@
             position: relative; /* 为头像的绝对定位提供参考 */
         }
         
-        /* 左上角头像 */
+        /* 左上角头像 - 现为纯色 */
         .avatar-frame {
             position: absolute; /* 绝对定位 */
             top: 30px; /* 距离顶部 */
@@ -28,17 +28,10 @@
             width: 90px; /* 头像框宽度 */
             height: 90px; /* 头像框高度 */
             border-radius: 50%; /* 变成圆形 */
-            overflow: hidden; /* 隐藏超出部分 */
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* 阴影效果 */
             border: 4px solid #fff; /* 白色边框，增强高级感 */
             z-index: 100; /* 确保在最上层 */
-            background-color: #f0f0f0; /* 备用背景色 */
-        }
-        .avatar-frame img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* 确保图片完整填充且不变形 */
-            display: block;
+            background-color: #004d7a; /* 高级的蓝色纯色 */
         }
 
         .container {
@@ -127,6 +120,18 @@
             box-shadow: 0 2px 8px rgba(111, 172, 219, 0.3);
         }
 
+        /* 访问计数器样式 */
+        .visit-counter {
+            margin-top: 20px;
+            font-size: 1em;
+            color: #666;
+            text-align: center;
+        }
+        .visit-counter strong {
+            color: #007bb5;
+            font-size: 1.1em;
+        }
+
         /* 底部页脚（作者和版权） */
         .footer {
             margin-top: 50px; /* 距离上方内容的间距 */
@@ -180,9 +185,8 @@
     </style>
 </head>
 <body>
-    <!-- 左上角头像 - 使用 URL -->
+    <!-- 左上角头像 - 现为纯色 -->
     <div class="avatar-frame">
-        <img src="https://c-ssl.dtstatic.com/uploads/blog/202008/11/20200811102143_sfkcj.thumb.400_0.jpg" alt="CSGOBots Project Author Profile Picture">
     </div>
 
     <div class="container">
@@ -210,11 +214,33 @@
                 </li>
             </ul>
         </nav>
+
+        <!-- 访问计数器显示区域 -->
+        <div class="visit-counter">
+            本页已被您访问 <strong><span id="visitCount">0</span></strong> 次。
+        </div>
+
     </div>
 
     <!-- 底部页脚 -->
     <footer class="footer">
         <p>&copy; 2025 CSGOBots. All rights reserved. Made by <span>UN1</span> powered by Gemini.</p>
     </footer>
+
+    <script>
+        // 获取或初始化访问次数
+        let pageVisits = localStorage.getItem('csgobots_page_visits');
+        if (pageVisits) {
+            pageVisits = parseInt(pageVisits) + 1; // 转换为数字并加1
+        } else {
+            pageVisits = 1; // 第一次访问
+        }
+
+        // 更新 localStorage
+        localStorage.setItem('csgobots_page_visits', pageVisits);
+
+        // 更新页面上的显示
+        document.getElementById('visitCount').textContent = pageVisits;
+    </script>
 </body>
 </html>
