@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSGOBetterbot指南：简单解析 SourceMod 插件</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        /* 默认主题 (白天模式) */
+        :root {
+            --primary-color: #007bff; /* 主要蓝色 */
+            --primary-dark: #0056b3;  /* 深蓝色 */
+            --secondary-color: #6c757d; /* 次要灰色 */
+            --background-light: #f8f9fa; /* 浅背景 */
+            --background-dark: #e9ecef; /* 深一点的背景 */
+            --text-color: #212529;    /* 主要文本色 */
+            --heading-color: #343a40; /* 标题色 */
+            --code-bg: #e0e0e0;       /* 代码背景 */
+            --code-text: #c7254e;     /* 代码文本色 */
+            --border-color: #dee2e6;  /* 边框色 */
+            --card-shadow: rgba(0, 0, 0, 0.08); /* 卡片阴影 */
+            --link-focus-shadow: rgba(0, 123, 255, 0.5); /* 链接焦点阴影 */
+            --link-selected-bg: var(--primary-color);
+            --link-selected-color: white;
+            --accent-color: #007bff; /* 强调色，用于链接等 */
+        }
+
+        /* 暗黑主题 */
+        .dark-mode {
+            --primary-color: #6a1b9a; /* 暗紫 */
+            --primary-dark: #4a148c;  /* 更深的暗紫 */
+            --secondary-color: #bdbdbd; /* 浅灰 */
+            --background-light: #2c2c2c; /* 深背景 */
+            --background-dark: #3a3a3a; /* 更深的背景 */
+            --text-color: #e0e0e0;    /* 亮文本色 */
+            --heading-color: #f8f9fa; /* 亮标题色 */
+            --code-bg: #424242;       /* 暗代码背景 */
+            --code-text: #f06292;     /* 亮代码文本色 */
+            --border-color: #4f4f4f;  /* 暗边框色 */
+            --card-shadow: rgba(0, 0, 0, 0.4); /* 暗卡片阴影 */
+            --link-focus-shadow: rgba(106, 27, 154, 0.5); /* 链接焦点阴影 */
+            --link-selected-bg: var(--primary-color);
+            --link-selected-color: white;
+            --accent-color: #9c27b0; /* 暗强调色 */
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            line-height: 1.7;
+            color: var(--text-color);
+            background-color: var(--background-light);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            box-shadow: 0 0 15px var(--card-shadow);
+            background-color: var(--background-dark);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        nav {
+            flex: 0 0 280px;
+            background-color: var(--background-light);
+            padding: 30px 20px;
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            position: sticky;
+            top: 0;
+            height: 100vh; /* 确保导航栏占据整个视口高度 */
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        nav::-webkit-scrollbar {
+            width: 8px;
+        }
+        nav::-webkit-scrollbar-track {
+            background: var(--background-light);
+        }
+        nav::-webkit-scrollbar-thumb {
+            background: var(--secondary-color);
+            border-radius: 4px;
+        }
+        nav::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+
+        nav h2 {
+            color: var(--heading-color);
+            margin-top: 0;
+            font-size: 1.5em;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            transition: color 0.3s, border-color 0.3s;
+        }
+
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        nav ul li {
+            margin-bottom: 5px; /* 调整间距 */
+        }
+
+        nav ul li a {
+            text-decoration: none;
+            color: var(--text-color);
+            padding: 8px 10px;
+            display: block;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+            outline: none; /* 移除默认焦点轮廓 */
+        }
+
+        nav ul li a:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* 链接焦点和激活效果 */
+        nav ul li a:focus,
+        nav ul li a:active {
+            box-shadow: 0 0 0 3px var(--link-focus-shadow);
+            background-color: var(--link-selected-bg);
+            color: var(--link-selected-color);
+        }
+
+        /* 多级目录样式 */
+        nav details {
+            margin-bottom: 5px;
+            padding: 0;
+            border-radius: 4px;
+        }
+
+        nav details summary {
+            cursor: pointer;
+            padding: 8px 10px;
+            color: var(--text-color);
+            list-style: none; /* 隐藏默认箭头 */
+            display: block; /* 使其可点击区域覆盖整个行 */
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* 自定义展开/折叠箭头，用伪元素实现 */
+        nav details summary::before {
+            content: '►'; /* 右箭头 */
+            display: inline-block;
+            margin-right: 8px;
+            font-size: 0.8em;
+            transition: transform 0.2s ease-out;
+        }
+
+        nav details[open] summary::before {
+            content: '▼'; /* 下箭头 */
+            transform: rotate(0deg); /* 确保回到正常状态，因为content变了 */
+        }
+
+        nav details summary:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        nav details ul {
+            padding-left: 20px; /* 增加缩进 */
+            margin-top: 5px;
+        }
+        nav details ul li a {
+            padding-left: 15px; /* 进一步缩进子链接 */
+        }
+
+
+        main {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .header-block {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header-block h1 {
+            color: var(--primary-dark);
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 15px;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            transition: color 0.3s, border-color 0.3s;
+        }
+
+        .subtitle, .author, .copyright {
+            font-size: 1.3em;
+            color: var(--secondary-color);
+            margin-top: -15px;
+            margin-bottom: 1em;
+            transition: color 0.3s;
+        }
+        .author { font-size: 1em; margin-bottom: 0.5em; }
+        .copyright { font-size: 0.9em; margin-top: 20px; margin-bottom: 0; }
+
+        h2, h3, h4 {
+            color: var(--heading-color);
+            transition: color 0.3s;
+        }
+        h2 { border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-top: 40px; margin-bottom: 20px; font-size: 1.8em; transition: border-color 0.3s; }
+        h3 { margin-top: 30px; margin-bottom: 15px; font-size: 1.4em; }
+        h4 { margin-top: 25px; margin-bottom: 10px; font-size: 1.2em; }
+
+        p { margin-bottom: 1em; }
+
+        code {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 2px 5px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-size: 0.9em;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            transition: background-color 0.3s;
+        }
+
+        pre code {
+            display: block;
+            white-space: pre;
+            padding: 0;
+            background: none;
+            color: var(--text-color);
+            font-size: 1em;
+            transition: color 0.3s;
+        }
+
+        .highlight {
+            background-color: #fff3cd;
+            padding: 5px 10px;
+            border-left: 5px solid #ffc107;
+            margin: 20px 0;
+            border-radius: 5px;
+            color: #664d03;
+            transition: background-color 0.3s, border-left-color 0.3s, color 0.3s;
+        }
+        .dark-mode .highlight {
+            background-color: #5e4a00;
+            border-left-color: #ffeb3b;
+            color: #ffe082;
+        }
+
+        .note, .warning {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            transition: background-color 0.3s, border-left-color 0.3s, color 0.3s;
+        }
+
+        .note {
+            background-color: #e0f7fa;
+            border-left: 5px solid #00acc1;
+            color: #006064;
+        }
+        .dark-mode .note {
+            background-color: #004b50;
+            border-left-color: #26c6da;
+            color: #80deea;
+        }
+
+        .warning {
+            background-color: #ffebee;
+            border-left: 5px solid #f44336;
+            color: #b71c1c;
+        }
+        .dark-mode .warning {
+            background-color: #4b0000;
+            border-left-color: #ef5350;
+            color: #ef9a9a;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: var(--background-light);
+            border-radius: 5px;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        table th, table td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            transition: border-color 0.3s;
+        }
+
+        table th {
+            background-color: var(--background-dark);
+            color: var(--heading-color);
+            font-weight: bold;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        table tr:nth-child(even) {
+            background-color: var(--background-dark);
+        }
+        .dark-mode table tr:nth-child(even) {
+            background-color: var(--background-dark); /* Prevent changes here, controlled by root variable */
+        }
+
+        table tr:hover {
+            background-color: var(--border-color);
+            transition: background-color 0.3s;
+        }
+
+        .code-block-title {
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 5px;
+            background-color: var(--code-bg);
+            padding: 8px 15px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            color: var(--heading-color);
+            word-wrap: break-word;
+            white-space: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* 可折叠代码块的Details/Summary样式 */
+        .collapsible-code-block details {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden; /* 防止内容泄露 */
+            transition: border-color 0.3s;
+        }
+        .collapsible-code-block summary {
+            background-color: var(--code-bg);
+            color: var(--heading-color);
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            display: block; /* Make summary take full width */
+            transition: background-color 0.3s, color 0.3s;
+            list-style: none; /* Hide default triangle */
+        }
+        .collapsible-code-block summary::-webkit-details-marker {
+            display: none; /* Hide specific webkit marker */
+        }
+        .collapsible-code-block summary::before {
+            content: '+ '; /* Custom collapsed marker */
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .collapsible-code-block details[open] summary::before {
+            content: '- '; /* Custom expanded marker */
+        }
+        .collapsible-code-block details pre {
+            margin: 0; /* Remove default margin */
+            border-radius: 0; /* Remove default border-radius */
+            background-color: var(--code-bg); /* Ensure consistent background */
+            padding-top: 0; /* Align with summary padding */
+        }
+        .collapsible-code-block details[open] summary {
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 8px 8px 0 0; /* Only top corners rounded when open */
+            transition: border-bottom-color 0.3s;
+        }
+
+        /* 夜间模式切换按钮 */
+        .theme-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            z-index: 1000; /* 确保在最上层 */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .theme-switcher:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* 底部链接样式 */
+        .footer-links {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 2px solid var(--border-color);
+            text-align: center;
+            color: var(--secondary-color);
+            transition: border-top-color 0.3s, color 0.3s;
+        }
+        .footer-links p {
+            margin-bottom: 10px;
+        }
+        .footer-links a {
+            color: var(--accent-color); /* 使用强调色 */
+            text-decoration: underline;
+            transition: color 0.3s;
+        }
+        .footer-links a:hover {
+            color: var(--primary-dark);
+            text-decoration: none;
+        }
+
+
+        @media (max-width: 992px) {
+            .container {
+                flex-direction: column;
+                margin: 0;
+                border-radius: 0;
+            }
+            nav {
+                flex: none;
+                width: auto;
+                position: relative; /* 在小屏幕下不再粘性，否则会覆盖内容 */
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            main {
+                padding: 20px;
+            }
+            .theme-switcher {
+                top: 10px;
+                right: 10px;
+                padding: 8px 12px;
+                font-size: 0.9em;
+            }
+        
+            nav ul li a:active {
+                box-shadow: none; /* 触摸设备不显示box-shadow，避免粘滞 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="theme-switcher" class="theme-switcher">切换昼夜模式</button>
+    <div class="container">
+        <nav>
+            <h2>目录</h2>
+            <ul>
+                <li><a href="#introduction">1. 插件简介</a></li>
+                <li><a href="#what-is-sourcemod">2. SourceMod 是什么？</a></li>
+                <details>
+                    <summary>3. 核心功能解析</summary>
+                    <ul>
+                        <li><a href="#pro-bot-ai">3.1. 专业级 Bot AI</a></li>
+                        <li><a href="#economy-management">3.2. 经济管理与武器购买</a></li>
+                        <li><a href="#bomb-hostage-ai">3.3. C4/人质场景 AI</a></li>
+                        <li><a href="#grenade-utility">3.4. 投掷物利用</a></li>
+                        <li><a href="#advanced-movement">3.5. 高级移动与射击策略</a></li>
+                        <li><a href="#team-roster">3.6. 团队花名册与职业选手模拟</a></li>
+                    </ul>
+                </details>
+                <details>
+                     <summary>4. 函数实现原理</summary>
+                    <ul>
+                        <li><a href="#event-hooks">4.1. 事件钩子 (Event Hooks)</a></li>
+                        <li><a href="#sdk-calls">4.2. SDK 调用 (SDK Calls)</a></li>
+                        <li><a href="#detours">4.3. 动态绕道 (Detours)</a></li>
+                        <li><a href="#prop-manipulation">4.4. 属性操控 (Prop Manipulation)</a></li>
+                        <li><a href="#timers">4.5. 定时器 (Timers)</a></li>
+                        <li><a href="#keyvalues-json">4.6. 配置数据 (KeyValues & JSON)</a></li>
+                        <li><a href="#navmesh">4.7. 导航网格 (NavMesh)</a></li>
+                        <li><a href="#botmimic">4.8. 机器人模仿 (BotMimic)</a></li>
+                    </ul>
+                </details>
+                <details open> <!-- 默认展开 -->
+                    <summary>5. 哪些参数可以自己改变？</summary>
+                    <ul>
+                        <li><a href="#headshot-rate">5.1. 爆头率修改</a></li>
+                        <li><a href="#bot-rosters-txt">5.2. bot_rosters.txt (团队花名册)</a></li>
+                        <li><a href="#bot-nades-txt">5.3. bot_nades.txt (预设投掷物)</a></li>
+                        <li><a href="#bot-info-json">5.4. bot_info.json (职业选手信息)</a></li>
+                        <li><a href="#plugin-variables">5.5. 插件内置变量</a></li>
+                        <li><a href="#console-variables">5.6. 控制台变量 (Cvars)</a></li>
+                    </ul>
+                </details>
+                <li><a href="#installation-usage">6. 安装与使用 (小白必看！)</a>
+                    <ul>
+                        <li><a href="#prerequisites">6.1. 前置条件</a></li>
+                        <li><a href="#plugin-installation">6.2. 插件安装</a></li>
+                        <li><a href="#config-setup">6.3. 配置文件夹设置</a></li>
+                        <li><a href="#using-team-command">6.4. 使用 `team` 命令</a></li>
+                    </ul>
+                </li>
+                <li><a href="#troubleshooting">7. 常见问题与排查</a></li>
+                <li><a href="#conclusion">8. 总结</a></li>
+            </ul>
+        </nav>
+        <main>
+            <div class="header-block">
+                <h1 id="introduction">Manico CSGOBetterbots指南：深入解析</h1>
+                <p class="subtitle">bot_stuff.sp篇</p>
+                <p class="author">un1 powered by Gemini</p>
+                <p class="copyright">&copy; 2025 All rights reserved.</p>
+            </div>
+
+            <p class="highlight">
+                恭喜你找到了这个宝藏！本指南将带你了解<a href="https://github.com/manicogaming/CSGOBetterBots/" target="_blank">Manico的Betterbots</a>插件。主要围绕bot_stuff.sp这个关键的模块。这里假定被我命名为 <code>bot_stuff_manico_20250813.sp</code>。通过本指南，你可以理解其工作原理，并学会如何自定义这些强大的功能。
+            </p>
+
+            <h2 id="what-is-sourcemod">2. SourceMod 是什么？</h2>
+            <p>
+                在深入学习插件之前，我们先来简单了解一下 SourceMod。
+            </p>
+            <ul>
+                <li>
+                    <strong>概念：</strong> SourceMod (简称 SM) 是一个针对 Valve Source 引擎游戏 (如 CS:GO, CS:S, TF2 等) 的服务器管理和插件框架。它允许服务器管理员通过编写脚本或安装插件来修改、增强游戏体验，添加新功能，甚至创造全新的游戏模式。
+                </li>
+                <li>
+                    <strong>为什么重要：</strong> 所有的 SourceMod 插件都依赖这个框架运行。它提供了与游戏内部机制交互的接口，让开发者能够读取、修改游戏数据，执行命令，响应游戏事件等。
+                </li>
+                <li>
+                    <strong>本插件与 SourceMod 的关系：</strong> <code>.sp</code> 文件就是 SourceMod 插件的源代码文件。它需要编译成 <code>.smx</code> 文件才能被 SourceMod 加载和运行。本插件通过 SourceMod 提供的功能，深入修改了 CS:GO 内部的机器人行为逻辑。
+                </li>
+            </ul>
+
+            <h2 id="core-features">3. 核心功能解析</h2>
+            <p>
+                这个插件做了很多“不简单”的事情，让我们来一一揭秘。
+            </p>
+
+            <h3 id="pro-bot-ai">3.1. 专业级 Bot AI：模拟职业选手行为</h3>
+            <p>
+                插件最引人注目的功能是让机器人模仿职业选手。它通过调整 Bot 的内部参数和决策逻辑来实现：
+            </p>
+            <ul>
+                <li>
+                    <strong>职业选手档案（<code>bot_info.json</code>）：</strong> 插件内置了一些职业选手的名字（如 s1mple, ZywOo, NiKo 等）。如果 Bot 的名字匹配，它将获得特殊的增强。
+                </li>
+                <li>
+                    <strong>反应时间与攻击性：</strong> 模拟职业选手的超快反应速度（<code>g_fReactionTime</code> 接近0）和激进的攻击性（<code>g_fAggression</code> 接近1）。普通 Bot 也将获得随机但提升的反应速度和攻击性。
+                </li>
+                <li>
+                    <strong>视野调整（<code>g_fLookAngleMaxAccel</code>）：</strong> 调整 Bot 视野移动的最大加速度，使其瞄准更迅速、更流畅，如同人类玩家。
+                </li>
+                <li>
+                    <strong>动态准星（<code>g_szCrosshairCode</code>）：</strong> 插件能为 Bot 设置特定的准星代码，这些代码可以是从职业选手配置中获取的。让 Bot 不仅行为像，连“看”起来都像。
+                </li>
+                <li>
+                    <strong>智能瞄准（<code>SelectBestTargetPos</code>）：</strong> Bot 不再盲目瞄准身体，它会尝试优先爆头（<code>head_0</code> 骨骼），如果头部不可见，则瞄准胸部（<code>spine_3</code> 骨骼），并检查目标的可视性。
+                </li>
+                <li>
+                    <strong>武器偏好：</strong> Bot 会随机选择偏好的武器，例如 CT 队伍的 Bot 可能更喜欢使用 USP 和 M4A1-S，而不是 P2000 和 M4A4。甚至会尝试购买 CZ75。
+                </li>
+            </ul>
+
+            <h3 id="economy-management">3.2. 经济管理与武器购买策略</h3>
+            <p>
+                普通的 CS:GO Bot 购买行为很呆板，这个插件大大提升了它们的经济管理能力：
+            </p>
+            <ul>
+                <li>
+                    <strong>智能防具与拆弹器购买：</strong> 在购买区内，如果 Bot 护甲不足或没有头盔，它会自动购买重型防弹衣和头盔。作为 CT 队员，如果没有拆弹器也会立即购买。
+                </li>
+                <li>
+                    <strong>手枪局与经济局优化：</strong>
+                    <ul>
+                        <li><strong>手枪局（第0/12回合）：</strong> Bot 有机会购买轻型防弹衣或 P250/Dual Berettas，不再盲目购买主武器。</li>
+                        <li><strong>经济局（Eco Round）：</strong> 如果 Bot 金钱不足但拥有次要武器，它们将优先购买手雷或防具。如果金钱低于 <code>bot_eco_limit</code> 且没有主武器，它们会购买更强力的手枪（P250, Tec9, Deagle），而不会浪费钱购买主武器。</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>智能丢枪（Drop Weapon）：</strong> 如果一个 Bot 经济良好但已经有主武器，而附近的队友 Bot 经济不好且没有主武器，有钱的 Bot 会瞄准队友，然后<strong>丢下自己的主武器</strong>并让队友捡起来。这模拟了人类玩家的共享经济行为。
+                </li>
+                <li>
+                    <strong>随机购买手雷套装：</strong> 开局 6 秒后，Bot 会从几种预设的手雷组合中随机选择一个购买（例如：烟雾弹+2闪光弹+HE弹，或烟雾弹+2闪光弹+燃烧弹）。
+                </li>
+            </ul>
+
+            <h3 id="bomb-hostage-ai">3.3. C4/人质场景 AI 改进</h3>
+            <p>
+                在特殊游戏模式下，Bot 的目标意识更强：
+            </p>
+            <ul>
+                <li>
+                    <strong>C4 定时炸弹处理：</strong> 只要 C4 被放置，CT 队伍的 Bot 就会意识到并寻找前往 C4 位置的最快路径（<code>Timer_MoveToBomb</code>），尤其是当它们是仅存的 CT 队员时。它们甚至会切换到小刀加快移动。
+                </li>
+                <li>
+                    <strong>Bot 士气调整：</strong> 在炸弹或人质模式中，如果 Bot 处于攻方（T 在炸弹模式或 CT 在人质模式），它们的士气会被降低（-3），促使它们更积极地行动。在半场切换后，士气会恢复。
+                </li>
+                <li>
+                    <strong>阻止 Bot 换枪来专注于目标：</strong> 当 Bot 正在拆弹、使用实体（如开门）、拾取人质或安装炸弹时，它们会暂时被阻止切换武器，以确保专注于当前任务。
+                </li>
+            </ul>
+
+            <h3 id="grenade-utility">3.4. 投掷物利用</h3>
+            <p>
+                Bot 不再只是随意扔雷，它们变得更具策略性：
+            </p>
+            <ul>
+                <li>
+                    <strong>预设投掷点（<code>bot_nades.txt</code>）：</strong> 这是一个非常强大的功能。插件允许你为每张地图配置多个预设的投掷点，包括投掷位置、视角、抛物线轨迹和投掷物类型（烟雾弹、燃烧弹等），甚至可以关联一个 <a href="#botmimic-detail">BotMimic</a> 的录像文件（<code>.rec</code>）。Bot 会根据这些预设进行投掷，例如投掷开局烟雾。
+                </li>
+                <li>
+                    <strong>根据声音投掷：</strong> 当 Bot 听到附近的枪声或噪音时，有几率向噪音源投掷手雷，甚至会尝试通过调整抛物线来绕过障碍物。
+                </li>
+                <li>
+                    <strong>BotMimic 模仿投掷：</strong> 插件与 BotMimic 插件结合，这意味着你录制Bot投掷手雷的动作后，这些AI Bot可以完全复刻你的投掷过程，包括移动到指定位置、调整视角、投掷手雷等。这使得预设投掷物的功能极其强大和逼真。
+                </li>
+            </ul>
+
+            <h3 id="advanced-movement">3.5. 高级移动与射击策略</h3>
+            <p>
+                Bot 的移动和射击行为更加“人类化”：
+            </p>
+            <ul>
+                <li>
+                    <strong>瞄准压枪与急停（AutoStop）：</strong> 当 Bot 瞄准敌人准备射击时（尤其是在中近距离），它会尝试进行“急停”（AutoStop），模仿人类玩家在射击时停下以提高精准度的行为。
+                </li>
+                <li>
+                    <strong>狙击枪开镜与切枪：</strong> Bot 使用狙击枪（AWP, SSG08）时，会智能地决定开镜级别。射击后，它们会执行快速切换武器的操作（<code>quick-switch</code>），这不仅是视觉效果，也能帮助它们更快地再次射击。
+                </li>
+                <li>
+                    <strong>Crouch Peek（蹲姿探点）：</strong> Bot 在射击敌人时，有机会自动蹲伏，类似于人类玩家的“控枪”和“低身位”射击。
+                </li>
+                <li>
+                    <strong>NavMesh 路径属性利用：</strong> 插件会检查当前导航网格区域的属性（<code>NAV_MESH_WALK</code> 或 <code>NAV_MESH_RUN</code>），并让 Bot 相应地决定是走路（潜行）还是跑步，这能让 Bot 在关键区域进行更隐蔽的移动。
+                </li>
+                <li>
+                    <strong>拾取地面武器：</strong> Bot 会智能识别地面上更高级别的武器（例如 AK47, M4A1, Deagle 等），如果它们当前装备的武器较差，会尝试跑过去拾取。
+                </li>
+            </ul>
+
+            <h3 id="team-roster">3.6. 团队花名册与职业选手模拟</h3>
+            <p>
+                通过自定义命令和配置文件，你可以让 Bot 组成特定的“战队”：
+            </p>
+            <ul>
+                <li>
+                    <strong><code>team</code> 控制台命令：</strong> 这个自定义命令允许你快速加载预设的 Bot 团队。例如，你可以定义一个“NaVi”战队，里面包含 s1mple, ZywOo 等 Bot。
+                </li>
+                <li>
+                    <strong><code>bot_rosters.txt</code>：</strong> 这个配置文件用于定义不同的 Bot 团队，包括团队名称、成员列表和团队 Logo。
+                </li>
+                <li>
+                    <strong>赛事模式下的特殊处理：</strong> 插件会检测游戏是否处于竞技模式（<code>game_mode 1 && game_type 0</code>），并根据回合数和分数调整一些 Bot 行为，例如在半场或赛点局强制 Bot 进行全面购买。
+                </li>
+            </ul>
+
+            <h2 id="sp-functions">4. 函数实现原理</h2>
+            <p>
+                本节将深入探讨插件中使用的核心 SourceMod 编程概念和函数，了解这些功能是如何实现上述智能表现的。
+            </p>
+
+            <h3 id="event-hooks">4.1. 事件钩子 (Event Hooks)</h3>
+            <p>
+                插件通过监听游戏事件来触发相应的 Bot 行为。这是 SourceMod 插件最基本的交互方式。当游戏内发生特定事件（如玩家重生、回合开始）时，插件中预先定义的函数就会被调用。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>代码示例：监听游戏事件</summary>
+                    <pre><code class="language-c">public void OnPluginStart()
+{
+    HookEventEx("player_spawn", OnPlayerSpawn);
+    HookEventEx("round_prestart", OnRoundPreStart);
+    // ... 其他事件
+}
+
+public void OnPlayerSpawn(Event eEvent, const char[] szName, bool bDontBroadcast)
+{
+    // 当有玩家（包括 Bot）重生时执行
+    int client = GetClientOfUserId(eEvent.GetInt("userid"));
+    SetPlayerTeammateColor(client); // 设置队员颜色
+    // ... 更多重生逻辑
+}</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li><code>HookEventEx("player_spawn", OnPlayerSpawn);</code>：表示当 Source 引擎触发 <code>player_spawn</code> 事件时，调用插件中的 <code>OnPlayerSpawn</code> 函数。
+                <li>插件监听了包括：玩家重生 (<code>player_spawn</code>)、回合准备 (<code>round_prestart</code>)、回合开始 (<code>round_start</code>)、回合结束 (<code>round_end</code>)、冻结时间结束 (<code>round_freeze_end</code>)、武器开镜 (<code>weapon_zoom</code>) 和武器开火 (<code>weapon_fire</code>) 等事件。
+                <li>通过这些事件，插件能够：
+                    <ul>
+                        <li>在玩家重生时设置 Bot 的属性、偏好。</li>
+                        <li>在回合开始和冻结时间结束时调整 Bot 的购买策略和行为模式。</li>
+                        <li>在武器开火时，尤其狙击枪射击后，触发 Bot 的快速切枪动作。</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3 id="sdk-calls">4.2. SDK 调用 (SDK Calls)</h3>
+            <p>
+                SDK 调用是 SourceMod 插件与游戏引擎底层 C++ 函数直接交互的一种高级方式。它允许插件执行游戏内部的私有或保护函数，从而实现对游戏行为的深度控制。这些调用通常依赖于一个 <code>.games</code> 配置文件来获取函数在内存中的地址和参数签名。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>代码示例：SDK 调用初始化 & 实际使用</summary>
+                    <pre><code class="language-c">public void LoadSDK()
+{
+    GameData hGameConfig = new GameData("botstuff.games");
+    // ... 获取各种偏移量和函数签名
+    
+    // 示例：获取 Bot 移动函数
+    StartPrepSDKCall(SDKCall_Player);
+    PrepSDKCall_SetFromConf(hGameConfig, SDKConf_Signature, "CCSBot::MoveTo");
+    PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_Pointer);
+    PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+    g_hBotMoveTo = EndPrepSDKCall(); // 保存函数句柄
+    // ... 其他 SDK 调用
+}
+
+public void BotMoveTo(int client, float fOrigin[3], RouteType routeType)
+{
+    SDKCall(g_hBotMoveTo, client, fOrigin, routeType); // 直接调用 Bot 内部移动函数
+}</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li><code>SDKCall(g_hBotMoveTo, client, fOrigin, routeType);</code>：直接调用 CS:GO 内部的 <code>CCSBot::MoveTo</code> 函数，让 Bot 移动到指定位置，并选择移动类型（比如快速路线）。
+                <li>插件使用了大量的 SDK Call 来实现 Bot 的核心行为：
+                    <ul>
+                        <li><code>CCSBot::MoveTo</code>：控制 Bot 移动。</li>
+                        <li><code>CBaseAnimating::LookupBone</code> / <code>GetBonePosition</code>：获取玩家模型的骨骼位置，用于精确瞄准。</li>
+                        <li><code>CCSBot::IsVisible</code> / <code>IsAtHidingSpot</code>：判断 Bot 是否能看到某个点/敌人，或者是否处于掩体后。</li>
+                        <li><code>CCSBot::EquipBestWeapon</code>：让 Bot 切换到最佳武器。</li>
+                        <li><code>CCSBot::SetLookAt</code>：让 Bot 瞄准某个特定点或实体，这在处理投掷物、拆弹和捡枪时非常关键。</li>
+                        <li><code>CBotManager::IsLineBlockedBySmoke</code>：判断视线是否被烟雾弹阻挡，用于智能投掷。</li>
+                        <li><code>CCSBot::BendLineOfSight</code>：调整 Bot 的视线以实现曲线投掷。</li>
+                        <li><code>CCSBot::ThrowGrenade</code>：控制 Bot 投掷手雷的具体动作。</li>
+                        <li><code>CBasePlayer::AddAccount</code>：直接给玩家（Bot）加钱。</li>
+                        <li><code>SetCrosshairCode</code>：直接设置 Bot 的准星代码。</li>
+                        <li><code>Weapon_Switch</code>：强制 Bot 切换武器。</li>
+                    </ul>
+                </li>
+                <li><code>botstuff.games</code> 文件：这个文件是 SDK Call 的“字典”，它告诉 SourceMod 如何找到 CS:GO 游戏代码中特定函数的内存地址和它们的参数类型、返回值类型。这是一个与游戏版本紧密相关的文件，不同游戏版本可能需要不同的 <code>.games</code> 文件。</li>
+            </ul>
+
+            <h3 id="detours">4.3. 动态绕道 (Detours)</h3>
+            <p>
+                动态绕道是一种更强大的 SDK 交互方式。它允许插件“拦截”游戏内部的某个函数调用，在原函数执行之前（Pre-Hook）或之后（Post-Hook），或者完全取代原函数（Supercede），插入自定义的逻辑。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>代码示例：动态绕道初始化 & 被绕道函数</summary>
+                    <pre><code class="language-c">public void LoadDetours()
+{
+    GameData hGameData = new GameData("botstuff.games");
+    DynamicDetour hBotSetLookAtDetour = DynamicDetour.FromConf(hGameData, "CCSBot::SetLookAt");
+    hBotSetLookAtDetour.Enable(Hook_Pre, CCSBot_SetLookAt); // 在原函数执行前调用 CCSBot_SetLookAt
+    // ... 其他 Detours
+}
+
+public MRESReturn CCSBot_SetLookAt(int client, DHookParam hParams)
+{
+    char szDesc[64];
+    DHookGetParamString(hParams, 1, szDesc, sizeof(szDesc));
+
+    if (strcmp(szDesc, "Avoid Flashbang") == 0)
+    {
+        DHookSetParam(hParams, 3, PRIORITY_HIGH); // 修改 Avoid Flashbang 的优先级
+        return MRES_ChangedHandled; // 表示已修改参数并处理
+    }
+    // ... 其他逻辑
+}</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li>插件主要使用 Detour 来修改 Bot 的核心行为：
+                    <ul>
+                        <li><code>CCSBot::SetLookAt</code>：通过拦截这个函数，插件可以修改 Bot 瞄准点的描述、优先级、持续时间等，实现精确控制。例如，它改变了 Bot 面对闪光弹时的反应优先级，或插入了投掷手雷的逻辑。</li>
+                        <li><code>CCSBot::PickNewAimSpot</code>：在 Bot 选择新瞄准点之后（Post-Hook），插件可以强制 Bot 根据“专业 Bot”逻辑选择最佳瞄准点（头部或脊柱）。</li>
+                        <li><code>BotCOS</code> / <code>BotSIN</code>：这两个函数是游戏内部计算角度余弦值和正弦值的，通过 <code>MRES_Supercede</code> 完全取代它们并返回 0，这可能是在禁用或修改 Bot 某些内在的数学计算，以达到插件期望的更“人类化”或更“精确”的瞄准效果。这是一种非常激进的修改方式。</li>
+                        <li><code>CCSBot::GetPartPosition</code>：修改 Bot 获取身体部位位置的逻辑，强制将头部向上修正 4 个单位，让 Bot 更容易瞄头。</li>
+                    </ul>
+                </li>
+                <li><code>MRESReturn</code>：Detour 函数的返回值类型，决定了对原函数的影响。
+                    <ul>
+                        <li><code>MRES_Ignored</code>：忽略插件的修改，继续执行原函数。</li>
+                        <li><code>MRES_Supercede</code>：完全取代原函数，原函数不会执行。</li>
+                        <li><code>MRES_ChangedHandled</code>：插件已修改参数并处理，原函数会继续执行，但使用修改后的参数。</li>
+                        <li><code>MRES_Override</code>：返回自定义值并跳过原函数（用于 Post-Hook）。</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3 id="prop-manipulation">4.4. 属性操控 (Prop Manipulation)</h3>
+            <p>
+                Source 引擎中的实体（如玩家、武器、C4）都有各种“属性”（Properties），这些属性存储了实体当前的状态和数据。SourceMod 允许插件读取和修改这些属性。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>代码示例：获取和设置属性</summary>
+                    <pre><code class="language-c">// 获取玩家的经济 (m_iAccount 是经济属性)
+int iAccount = GetEntProp(i, Prop_Send, "m_iAccount");
+
+// 设置 Bot 的士气 (g_iBotMoraleOffset 是一个预先获取的士气属性的偏移量)
+SetEntData(i, g_iBotMoraleOffset, -3);
+
+// 获取 Bot 是否在购买区 (m_bInBuyZone 是一个布尔属性)
+bool bInBuyZone = !!GetEntProp(i, Prop_Send, "m_bInBuyZone");</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li><code>GetEntProp</code> / <code>SetEntProp</code>：用于通过属性名称或偏移量读取和写入实体属性。
+                <li><code>FindSendPropInfo</code> / <code>GetOffset</code>：用于在插件启动时查找所需属性的偏移量，这样在运行时可以直接使用偏移量进行快速访问，性能更优。
+                <li>插件通过属性操控实现了：
+                    <ul>
+                        <li>读取 Bot 经济、护甲、武器信息、当前任务、姿态等。</li>
+                        <li>修改 Bot 的士气、瞄准目标点、射击时间戳、瞄准角度等。</li>
+                        <li>获取游戏规则 (<code>GameRules</code>) 的属性，如当前回合数、比分、游戏阶段等，用于判断比赛状态和调整 Bot 行为。</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3 id="timers">4.5. 定时器 (Timers)</h3>
+            <p>
+                定时器允许插件在未来的某个时间点或以一定频率重复执行某个函数。这对于需要持续检查状态或定期执行任务的功能非常有用。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>代码示例：创建定时器</summary>
+                    <pre><code class="language-c">public void OnMapStart()
+{
+    CreateTimer(1.0, Timer_CheckPlayer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE); // 每1秒执行一次
+    CreateTimer(0.1, Timer_MoveToBomb, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE); // 每0.1秒执行一次
+    // ...
+}</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li><code>CreateTimer</code>：创建定时器。
+                <li><code>Timer_CheckPlayer</code>：定时检查 Bot 的经济和购买情况。</li>
+                <li><code>Timer_MoveToBomb</code>：定时检查 C4 状态，并让 CT Bot 移动到 C4 位置。</li>
+                <li><code>Timer_DropWeapons</code>：在竞技模式下，定时检查 Bot 的丢枪需求。</li>
+                <li><code>Timer_EnableSwitch</code> / <code>Timer_DontForceThrow</code>：这些是短时一次性定时器，用于在特定操作（如拆弹、安装 C4、投掷手雷）结束后恢复 Bot 的武器切换能力或停止强制投掷。</li>
+            </ul>
+
+            <h3 id="keyvalues-json">4.6. 配置数据 (KeyValues & JSON)</h3>
+            <p>
+                插件使用 <code>KeyValues</code> (标准的 Valve 配置文件格式) 和 <code>JSON</code> (一种轻量级的数据交换格式) 来存储和读取外部配置数据。这使得用户无需修改源代码就能自定义插件行为。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>代码示例：读取 KeyValues & JSON 文件</summary>
+                    <pre><code class="language-c">public Action Command_Team(int client, int iArgs)
+{
+    // ...
+    KeyValues kv = new KeyValues("Teams");
+    if (!kv.ImportFromFile(szPath)) // 从 bot_rosters.txt 读取
+    {
+        // ... 错误处理
+    }
+    // ...
+}
+
+bool IsProBot(const char[] szName, char[] szCrosshairCode, int iSize)
+{
+    // ...
+    JSONObject jData = JSONObject.FromFile(szPath); // 从 bot_info.json 读取
+    if(jData.HasKey(szName))
+    {
+        JSONObject jInfoObj = view_as<JSONObject>(jData.Get(szName));
+        jInfoObj.GetString("crosshair_code", szCrosshairCode, iSize);
+        // ...
+    }
+    // ...
+}</code></pre>
+                </details>
+            </div>
+           <ul>
+                <li><code>KeyValues</code> 用于读取 <code>configs/bot_rosters.txt</code> (团队花名册) 和 <code>configs/bot_nades.txt</code> (预设投掷物)。</li>
+                <li><code>JSON</code> 则用于读取 <code>data/bot_info.json</code> (职业选手信息和准星代码)。</li>
+                <li>这种设计让插件拥有很高的可配置性，用户可以通过编辑这些文本文件来定制自己 Bot 的行为。</li>
+            </ul>
+
+            <h3 id="navmesh">4.7. 导航网格 (NavMesh)</h3>
+            <p>
+                <code>navmesh</code> 是 Source 引擎游戏中 Bot 寻路和理解地图布局的核心组件。它定义了 Bot 可以在地图上行走、跳跃、蹲伏、躲藏的区域。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>代码示例：获取 NavMesh 属性</summary>
+                    <pre><code class="language-c">g_pCurrArea[client] = NavMesh_GetNearestArea(g_fBotOrigin[client]); // 获取 Bot 当前所在区域
+if(g_pCurrArea[client] != INVALID_NAV_AREA)
+{
+    if (g_pCurrArea[client].Attributes & NAV_MESH_WALK) // 检查区域是否有步行属性
+        iButtons |= IN_SPEED; // 保持步行
+    
+    if (g_pCurrArea[client].Attributes & NAV_MESH_RUN) // 检查区域是否有奔跑属性
+        iButtons &= ~IN_SPEED; // 取消步行（即奔跑）
+}</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li>插件利用 <code>NavMesh_GetNearestArea</code> 获取 Bot 当前所处的 NavMesh 区域。</li>
+                <li>通过读取该区域的属性（如 <code>NAV_MESH_WALK</code> 或 <code>NAV_MESH_RUN</code>），插件可以决定 Bot 应该走路（潜行）还是跑步，使其移动更智能。</li>
+                <li><code>NavMesh_GetGroundHeight</code> 用于获取地面高度，这在处理投掷物抛物线时非常实用。</li>
+            </ul>
+
+            <h3 id="botmimic">4.8. 机器人模仿 (BotMimic)</h3>
+            <p id="botmimic-detail">
+                <code>BotMimic</code> 是一个 SourceMod 扩展，允许记录和回放玩家的动作，以供 Bot 模仿。这在实现复杂、精确的动作（如预设投掷物）时非常有用。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>代码示例：播放 BotMimic 录像</summary>
+                    <pre><code class="language-c">if(view_as<LookAtSpotState>(GetEntData(client, g_iBotLookAtSpotStateOffset)) == LOOK_AT_SPOT && fSpeed == 0.0 && (GetEntityFlags(client) & FL_ONGROUND))
+    BotMimic_PlayRecordFromFile(client, g_szReplay[g_iDoingSmokeNum[client]]);</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li>插件通过 <code>BotMimic_PlayRecordFromFile</code> 播放预先录制好的 <code>.rec</code> 文件。这些录像记录了 Bot 移动到投掷点、调整视角并投掷的全过程。</li>
+                <li>当 Bot 成功到达预设的投掷位置并瞄准到目标点时，它就会播放相应的 BotMimic 录像来完成投掷动作。</li>
+                <li>当 BotMimic 录像播放完毕后，<code>BotMimic_OnPlayerStopsMimicing</code> 事件被触发，插件会清除 Bot 的投掷任务状态。</li>
+            </ul>
+
+
+            <h2 id="configurable-parameters">5. 哪些参数可以自己改变？</h2>
+            <p>
+                这个插件的一大优势就是其高度的可配置性。小白用户也能通过修改几个简单的文件来实现强大的自定义功能！
+            </p>
+
+            <h3 id="headshot-rate">5.1. 爆头率修改：让 Bot 瞄准更精准</h3>
+            <p>
+                如果你想调整 Bot 的爆头率，使其更具挑战性或更符合你的需求，可以通过修改插件的源代码来实现。以下是你需要关注和修改的部分：
+            </p>
+            <p class="warning">
+                <strong>重要提示：</strong> 修改源代码需要重新编译插件。在进行任何修改之前，建议备份原始的 <code>.sp</code> 文件。
+            </p>
+            <p><strong>文件路径：</strong> <code>addons/sourcemod/scripting/bot_stuff_manico_20250813.sp</code></p>
+            <p><strong>修改位置：</strong> 找到函数 <code>public void SelectBestTargetPos(int client, float fTargetPos[3])</code>。</p>
+            <p>在这个函数内部，你会找到一个 <code>switch(iDefIndex)</code> 结构，它根据 Bot 当前所持的武器类型来决定瞄准策略。我们需要修改其中的几行代码。</p>
+
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>代码片段：爆头率控制核心</summary>
+                    <pre><code class="language-c">public void SelectBestTargetPos(int client, float fTargetPos[3])
+{
+    if(IsValidClient(g_iTarget[client]) && IsPlayerAlive(g_iTarget[client]))
+    {
+        int iBone = LookupBone(g_iTarget[client], "head_0");
+        int iSpineBone = LookupBone(g_iTarget[client], "spine_3");
+        if (iBone < 0 || iSpineBone < 0)
+            return;
+        
+        // 这一行决定了 Bot 最终瞄准身体（true）还是头部（false）
+        bool bShootSpine = false; 
+
+        float fHead[3], fBody[3], fBad[3];
+        GetBonePosition(g_iTarget[client], iBone, fHead, fBad);
+        GetBonePosition(g_iTarget[client], iSpineBone, fBody, fBad);
+        
+        fHead[2] += 4.0; // 稍微抬高头部瞄准点
+        
+        if (BotIsVisible(client, fHead, false, -1))
+        {
+            if (BotIsVisible(client, fBody, false, -1))
+            {
+                if (!IsValidEntity(g_iActiveWeapon[client])) return;
+                
+                int iDefIndex = GetEntProp(g_iActiveWeapon[client], Prop_Send, "m_iItemDefinitionIndex");
+                
+                switch(iDefIndex)
+                {
+                    // 步枪、冲锋枪、霰弹枪、机枪等常见武器的定义索引
+                    // 7: AK47, 8: AUG, 10: Famas, 13: GalilAR, 14: M4A4, 16: M4A1-S, 17: MAC-10, 19: P90
+                    // 23: MP5SD, 24: UMP-45, 25: XM1014, 26: Bizon, 27: MAG-7, 28: MP9, 29: Nova
+                    // 33: Negev, 34: M249, 35: Sawed-Off, 39: SG553, 60: Glock (默认Bot拿Glock也会走到这里)
+                    case 7, 8, 10, 13, 14, 16, 17, 19, 23, 24, 25, 26, 27, 28, 29, 33, 34, 35, 39, 60:
+                    {
+                        float fTargetDistance = GetVectorDistance(g_fBotOrigin[client], fHead);
+                        // ******** 这是核心修改点 (对于大部分武器) ********
+                        // 原始代码: if (IsItMyChance(70.0) && fTargetDistance < 2000.0)
+                        // 这意味着在 2000 单位距离内，Bot 有 70% 的机会瞄准身体（bShootSpine = true）。
+                        // 换言之，默认爆头率是 30% (100% - 70%)。
+
+                        // 要提高爆头率：
+                        // 1. 降低 IsItMyChance() 中传入的百分比值。
+                        //    例如，改为 IsItMyChance(50.0) -> 50% 爆头率
+                        //    改为 IsItMyChance(20.0) -> 80% 爆头率
+                        //    改为 IsItMyChance(0.0)  -> 100% 爆头率 (如果头部可见且在距离内)
+                        
+                        if (IsItMyChance(70.0) && fTargetDistance < 2000.0) // &lt;-- 在这里修改数字 (默认 70.0)
+                            bShootSpine = true;
+                    }
+                    // 狙击枪 (AWP: 9, SSG08: 38), 左轮 (11)
+                    // 提醒：Deagle (1) 原始代码中未被明确包含在此处，建议将其添加到狙击枪的策略中
+                    case 1, 9, 11, 38: // &lt;-- 如果需要，在此处添加 '1' (Deagle 的 iDefIndex)
+                    {
+                        // ******** 这是狙击枪/沙鹰等武器的修改点 ********
+                        // 原始代码: bShootSpine = true;
+                        // 这意味着这些武器默认总是瞄准身体（0% 爆头率）。
+
+                        // 如果想让这些武器也能爆头：
+                        // 1. 设置为 false，强制 100% 爆头率 (如果头部可见)
+                        //    bShootSpine = false; 
+                        // 2. 使用 IsItMyChance() 设置爆头概率
+                        //    bShootSpine = !IsItMyChance(X.0); // X 为不爆头的几率
+                        //    例如：bShootSpine = !IsItMyChance(50.0); // 50% 爆头率
+
+                        bShootSpine = true; // &lt;-- 在这里修改
+                    }
+                }
+            }
+        }
+        else
+        {
+            //Head wasn't visible, check other bones.
+            for (int b = 0; b <= sizeof(g_szBoneNames) - 1; b++)
+            {
+                iBone = LookupBone(g_iTarget[client], g_szBoneNames[b]);
+                if (iBone < 0)
+                    return;
+                
+                GetBonePosition(g_iTarget[client], iBone, fHead, fBad);
+                
+                if (BotIsVisible(client, fHead, false, -1))
+                    break;
+                else
+                    fHead[2] = 0.0;
+            }
+        }
+        
+        if(bShootSpine)
+            fTargetPos = fBody;
+        else
+            fTargetPos = fHead;
+    }
+}</code></pre>
+                </details>
+            </div>
+
+            <ul class="note">
+                <li><strong><code>bShootSpine</code> 变量：</strong> 这是一个布尔变量，如果为 <code>true</code>，Bot 将瞄准敌人的脊柱（即身体部位）；如果为 <code>false</code>，则瞄准头部。插件的目标是将其设置为 <code>false</code> 来提高爆头率。</li>
+                <li><strong><code>IsItMyChance(float fChance)</code>：</strong> 这是一个辅助函数，它会生成一个 0 到 100 之间的随机浮点数，并判断这个随机数是否小于或等于你传入的 <code>fChance</code> 值。
+                    <ul>
+                        <li>如果 <code>IsItMyChance(70.0)</code>，那么有 70% 的概率返回 <code>true</code>。</li>
+                        <li>在当前代码中，<code>if (IsItMyChance(70.0) && fTargetDistance < 2000.0) bShootSpine = true;</code> 表示在指定距离内，有 70% 的几率让 <code>bShootSpine</code> 为 <code>true</code>（瞄准身体）。这意味着只有 30% (<code>100% - 70%</code>) 的几率 <code>bShootSpine</code> 保持为 <code>false</code>（瞄准头部）。</li>
+                        <li><strong>要提高大部分武器的爆头率，你需要**降低** <code>IsItMyChance()</code> 中传入的数字。</strong></li>
+                    </ul>
+                </li>
+                <li><strong>狙击枪/沙鹰等特殊武器：</strong> 原始代码中，对于狙击枪和左轮手枪（Case 9, 11, 38）， <code>bShootSpine</code> 被硬编码为 <code>true</code>，这意味着这些武器默认是瞄准身体的（0% 爆头率）。
+                    <ul>
+                        <li><strong>针对沙鹰（weapon_deagle）</strong>，其 <code>iDefIndex</code> 是 <code>1</code>，原始代码中未将其包含在该 <code>case</code> 列表中，这可能导致沙鹰的爆头行为不一致。建议将其添加到 `case` 列表中以统一管理。</li>
+                        <li>如果你希望这些武器也能爆头，你需要修改 <code>bShootSpine = true;</code> 这一行，例如改为 <code>bShootSpine = false;</code> 来强制 100% 爆头，或者使用 <code>bShootSpine = !IsItMyChance(X.0);</code> 来设置爆头概率。</li>
+                    </ul>
+                </li>
+            </ul>
+            <p>通过这种方式，你可以精确调整 Bot 的爆头率，使其更符合你的期望，无论是变得更强还是更弱。</p>
+
+            <h3 id="bot-rosters-txt">5.2. <code>configs/bot_rosters.txt</code> (团队花名册)</h3>
+            <p>
+                这个文件允许你定义自定义的 Bot 战队，并指定他们的成员和团队 Logo。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>文件路径与示例内容：<code>addons/sourcemod/configs/bot_rosters.txt</code></summary>
+                    <pre><code class="language-keyvalues">"Teams"
+{
+    "Astralis"
+    {
+        "players"       "dupreeh,Xyp9x,device,gla1ve,Magisk"
+        "logo"          "valve_astralis" // 团队Logo的代码，可以在CS:GO Wiki或游戏中找到
+    }
+    "NaVi"
+    {
+        "players"       "s1mple,ZywOo,NiKo,sh1ro,jL" // 这里可以列出 bot_info.json 中定义的职业选手名字
+        "logo"          "valve_navi"
+    }
+    "MyCustomTeam" // 你自己的自定义团队
+    {
+        "players"       "Bot01,Bot02,Bot03,Bot04,Bot05" // 任意 Bot 名字，除非在 bot_info.json 中有定义，否则就是普通 Bot
+        "logo"          "" // 如果不设置，可以留空
+    }
+}</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li><strong><code>"Teams"</code>：</strong> 根节点，必须存在。</li>
+                <li><strong><code>"TeamName"</code>：</strong> 每个子节点代表一个队伍的名称，例如 <code>"Astralis"</code>, <code>"NaVi"</code>。你可以自定义团队名称。</li>
+                <li><strong><code>"players"</code>：</strong> 逗号分隔的 Bot 名字列表。这些名字将用于添加 Bot。如果名字与 <code>bot_info.json</code> 中的职业选手匹配，这些 Bot 将获得增强。</li>
+                <li><strong><code>"logo"</code>：</strong> 这是一个 Steam 团队 Logo 的内部代码。例如 <code>valve_astralis</code>, <code>valve_navi</code>。你可以在网上找到很多，或在游戏中通过 <code>mp_teamlogo_1</code> / <code>mp_teamlogo_2</code> 命令尝试。</li>
+            </ul>
+            <p class="highlight">
+                <strong>使用方法：</strong> 在游戏中打开控制台，输入 <code>team &lt;TeamName&gt; &lt;t|ct&gt;</code>。<br>
+                例如：<code>team NaVi t</code> 会将 NaVi 战队的 Bot 加入 T 方。<br>
+                <code>team Astralis ct</code> 会将 Astralis 战队的 Bot 加入 CT 方。
+            </p>
+
+            <h3 id="bot-nades-txt">5.3. <code>configs/bot_nades.txt</code> (预设投掷物)</h3>
+            <p>
+                这个文件允许你为不同的地图定义 Bot 在特定位置投掷特定手雷的动作。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>文件路径与示例内容：<code>addons/sourcemod/configs/bot_nades.txt</code></summary>
+                    <pre><code class="language-keyvalues">"Nades"
+{
+    "de_dust2" // 地图名称
+    {
+        "SmokeMid" // 自定义名称
+        {
+            "position"          "-57.070797 2139.697498 -16.030310" // Bot 走到这个位置
+            "lookat"            "-141.040186 2115.118945 90.729111" // Bot 瞄准这个点进行投掷
+            "nadedefindex"      "43" // 投掷物 ID：43为烟雾弹 (smokegrenade)
+            "replay"            "dust2_mid_smoke.rec" // BotMimic 录像文件名 (位于 /addons/sourcemod/data/botmimic/ 目录)
+            "timestamp"         "10.0" // 每多少秒可以重复投掷一次（此功能在此插件中被 RoundEnd 重置）
+            "team"              "T" // 哪个队伍的 Bot 投掷
+        }
+        "MolotovShort"
+        {
+            "position"          "142.123 200.456 0.0"
+            "lookat"            "150.789 220.123 50.0"
+            "nadedefindex"      "44" // 44为燃烧弹 (molotov) / 48为燃烧瓶 (incgrenade)
+            "replay"            "dust2_short_molotov.rec"
+            "timestamp"         "15.0"
+            "team"              "T"
+        }
+    }
+    "de_mirage"
+    {
+        "SmokeCTSpawn"
+        {
+            "position"          "-123.456 789.012 10.0"
+            "lookat"            "-130.000 800.000 60.0"
+            "nadedefindex"      "43"
+            "replay"            "mirage_ct_smoke.rec"
+            "timestamp"         "12.0"
+            "team"              "CT"
+        }
+    }
+}</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li><strong><code>"Nades"</code>：</strong> 根节点。</li>
+                <li><strong><code>"map_name"</code>：</strong> 键为地图文件名，例如 <code>"de_dust2"</code>。</li>
+                <li><strong><code>"CustomName"</code>：</strong> 地图下的子键，为这个投掷点自定义一个名称，例如 <code>"SmokeMid"</code>。</li>
+                <li><strong><code>"position"</code>：</strong> Bot 必须走到这个 X Y Z 坐标位置才能开始投掷。</li>
+                <li><strong><code>"lookat"</code>：</strong> Bot 投掷时瞄准的 X Y Z 坐标。</li>
+                <li><strong><code>"nadedefindex"</code>：</strong> 投掷物的内部 ID。
+                    <ul>
+                        <li><code>43</code>: 烟雾弹 (<code>weapon_smokegrenade</code>)</li>
+                        <li><code>44</code>: 燃烧弹 (<code>weapon_molotov</code>)</li>
+                        <li><code>48</code>: 燃烧瓶 (<code>weapon_incgrenade</code>)</li>
+                        <li><code>46</code>: 闪光弹 (<code>weapon_flashbang</code>)</li>
+                        <li><code>45</code>: 高爆手雷 (<code>weapon_hegrenade</code>)</li>
+                        <li><code>47</code>: 诱饵弹 (<code>weapon_decoy</code>)</li>
+                    </ul>
+                </li>
+                <li><strong><code>"replay"</code>：</strong> BotMimic 扩展录制的 <code>.rec</code> 文件名（不含路径），例如 <code>"dust2_mid_smoke.rec"</code>。你需要自己录制这些文件并放置在 <code>addons/sourcemod/data/botmimic/</code> 目录下。</li>
+                <li><strong><code>"timestamp"</code>：</strong> 在一个回合中，Bot 间隔多长时间才能再次尝试投掷（此功能在此插件中被 RoundEnd 重置）。</li>
+                <li><strong><code>"team"</code>：</strong> 哪个队伍的 Bot 负责投掷。输入 <code>"T"</code> 或 <code>"CT"</code>。</li>
+            </ul>
+            <p class="warning">
+                <strong>重要提示：</strong> 要使用此功能，你服务器上必须安装 <a href="https://forums.alliedmods.net/showthread.php?t=220268" target="_blank">BotMimic</a> 插件。<br>
+                录制 <code>.rec</code> 文件需要一些技巧：作为人类玩家，在游戏中启用 BotMimic 录制，运行到指定 <code>position</code>，瞄准 <code>lookat</code> 点并完成投掷动作，然后停止录制，将文件命名为 <code>replay</code> 中指定的名称。
+            </p>
+
+            <h3 id="bot-info-json">5.4. <code>data/bot_info.json</code> (职业选手信息)</h3>
+            <p>
+                这个 JSON 文件存储了插件中识别的“职业 Bot”的具体设置，主要是他们的准星代码。注意以下是伪代码,实际格式看文件。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>文件路径与示例内容：<code>addons/sourcemod/data/bot_info.json</code></summary>
+                    <pre><code class="language-json">{
+    "s1mple": {
+        "crosshair_code": "CSGO-s1mple-crosshair-code-here" // 实际的准星代码
+    },
+    "ZywOo": {
+        "crosshair_code": "CSGO-ZywOo-crosshair-code-here"
+    },
+    "NiKo": {
+        "crosshair_code": "CSGO-NiKo-crosshair-code-here"
+    },
+    "sh1ro": {
+        "crosshair_code": "CSGO-sh1ro-crosshair-code-here"
+    },
+    "donk": {
+        "crosshair_code": "CSGO-donk-crosshair-code-here"
+    },
+    "m0NESY": {
+        "crosshair_code": "CSGO-m0NESY-crosshair-code-here"
+    }
+}</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li><strong><code>"PlayerName"</code>：</strong> 键为 Bot 的名字（需要与 <code>bot_rosters.txt</code> 或你用于 <code>bot_add</code> 的名字完全匹配）。</li>
+                <li><strong><code>"crosshair_code"</code>：</strong> 该职业选手使用的准星代码。你可以从 <a href="https://prosettings.net/cs-go-pro-settings/#crosshairs" target="_blank">ProSettings</a> 等网站找到这些代码。</li>
+            </ul>
+            <p class="note">
+                <strong>注意：</strong> <code>s1mple</code>, <code>ZywOo</code>, <code>NiKo</code>, <code>sh1ro</code>, <code>jL</code>, <code>donk</code>, <code>m0NESY</code> 这几个名字的 Bot 被插件硬编码了额外的“超能力”：他们的 <code>g_fLookAngleMaxAccel</code> 被设置为 <code>20000.0</code>，<code>g_fReactionTime</code> 被设置为 <code>0.0</code>，<code>g_fAggression</code> 被设置为 <code>1.0</code>。这意味着他们的瞄准速度极快，反应时间为零，并且极具攻击性。
+                其他在 <code>bot_info.json</code> 中定义但不在上述列表中的 Bot，其 <code>ReactionTime</code>, <code>Aggression</code> 和 <code>LookAngleMaxAccel</code> 将会是随机且较高的数值，但不如硬编码的这些Bot那么极端。
+            </p>
+
+            <h3 id="plugin-variables">5.5. 插件内置变量（修改源代码）</h3>
+            <p>
+                虽然不推荐小白直接修改源代码，但如果你想进行更深度的自定义，可以找到以下与 Bot 行为相关的布尔变量，并尝试修改它们的初始化值。
+            </p>
+            <div class="collapsible-code-block">
+                <details>
+                    <summary>相关代码行：在 <code>OnClientPostAdminCheck</code> 函数中</summary>
+                    <pre><code class="language-c">public void OnClientPostAdminCheck(int client)
+{
+    // ...
+    g_bUseUSP[client] = IsItMyChance(75.0); // CT Bot 有75%几率倾向使用 USP
+    g_bUseM4A1S[client] = IsItMyChance(50.0); // CT Bot 有50%几率倾向使用 M4A1-S
+    g_bUseCZ75[client] = IsItMyChance(20.0); // Bot 有20%几率倾向购买 CZ75
+    // ...
+}</code></pre>
+                </details>
+            </div>
+            <ul>
+                <li>这些变量控制了 Bot 对特定武器的偏好。<code>IsItMyChance(float fChance)</code> 是一个判断随机几率的辅助函数。
+                <li>如果你想让所有 Bot 都使用 USP，可以改成 <code>g_bUseUSP[client] = true;</code>。如果你想完全禁用某个偏好，则设为 <code>false;</code>。</li>
+                <li>修改后需要重新编译 <code>.sp</code> 文件为 <code>.smx</code> 文件。</li>
+            </ul>
+
+            <h3 id="console-variables">5.6. 控制台变量 (Cvars)</h3>
+            <p>
+                插件会读取和影响一些 CS:GO 内置的控制台变量。
+            </p>
+            <ul>
+                <li>
+                    <strong><code>bot_eco_limit</code>：</strong> 这个 Cvar 控制 Bot 在经济局最低的经济限制。插件会根据游戏阶段（特别是竞技模式的赛点局或半场局）动态地将它设置为 0 或 3000。
+                    <ul>
+                        <li>你可以通过 <code>sm_cvar bot_eco_limit &lt;value&gt;</code> 在控制台修改。</li>
+                        <li>如果插件判断为“强制购买”回合（<code>ShouldForce()</code>），它会强制把 <code>bot_eco_limit</code> 设置为 0，让 Bot 不受经济限制地购买。</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong><code>game_mode</code> / <code>game_type</code>：</strong> 插件通过这些 Cvar 判断是否处于竞技模式。
+                </li>
+                <li>
+                    <strong><code>mp_halftime</code> / <code>mp_maxrounds</code> / <code>mp_overtime_maxrounds</code> / <code>mp_match_can_clinch</code>：</strong> 插件通过这些 Cvar 判断游戏的回合规则和是否处于半场、赛点或加时赛，从而触发 Bot 的强制购买行为。
+                </li>
+                <li>
+                    <strong><code>weapon_recoil_scale</code>：</strong> 插件在计算瞄准压枪时会用到这个 Cvar 的值。通常你不需要修改它，除非你想全局调整后坐力效果。
+                </li>
+            </ul>
+
+            <h2 id="installation-usage">6. 安装与使用 (小白必看！)</h2>
+            <p>
+                按照以下步骤，即使是小白也能轻松安装和使用这个强大的 Bot 增强插件。
+            </p>
+
+            <h3 id="prerequisites">6.1. 前置条件</h3>
+            <ol>
+                <li>
+                    <strong>SourceMod & MetaMod：</strong> 确保你的 CS:GO 服务器已经安装了最新版本的 <a href="https://www.sourcemod.net/downloads.php" target="_blank">SourceMod</a> 和 <a href="https://www.metamodsource.net/downloads.php" target="_blank">MetaMod:Source</a>。这是 SourceMod 插件运行的基础。
+                </li>
+                <li>
+                    <strong>其他插件：</strong> 请参考<a href="https://github.com/manicogaming/CSGOBetterBots#dependencies" target="_blank">Manico's Edition</a>，确保安装所有依赖插件。
+                </li>
+            </ol>
+
+            <h3 id="plugin-installation">6.2. 插件安装</h3>
+            <ol>
+                <li>
+                    将提供的 <code>bot_stuff_manico_20250813.sp</code> 文件编译成 <code>.smx</code> 文件。如果你不熟悉编译，可以直接下载已经编译好的 <code>.smx</code> 文件（通常在插件发布页面会提供）。
+                    <p class="note"><strong>如何编译：</strong> 将 <code>.sp</code> 文件放在 <code>addons/sourcemod/scripting/</code> 文件夹中。在服务器控制台或本地客户端启动 CS:GO，并确保 SourceMod 正常加载。然后输入 <code>sm_compile bot_stuff_manico_20250813.sp</code>。如果成功，会在 <code>addons/sourcemod/plugins/</code> 目录下生成 <code>bot_stuff_manico_20250813.smx</code>。</p>
+                </li>
+                <li>
+                    将编译好的 <code>bot_stuff_manico_20250813.smx</code> 文件上传到你 CS:GO 服务器的 <code>csgo/addons/sourcemod/plugins/</code> 目录下。
+                </li>
+            </ol>
+
+            <h3 id="config-setup">6.3. 配置文件夹设置</h3>
+            <p>
+                以下文件夹的存在，是让插件能够加载自定义数据。如果你正确安装了，他们应该已经存在。如果没有，请按照以下步骤创建和配置。
+            </p>
+            <ol>
+                <li>
+                    在 <code>csgo/addons/sourcemod/configs/</code> 目录下创建 <code>bot_rosters.txt</code> 文件（参照上文 5.2 章节）。
+                </li>
+                <li>
+                    在 <code>csgo/addons/sourcemod/configs/</code> 目录下创建 <code>bot_nades.txt</code> 文件（参照上文 5.3 章节）。
+                </li>
+                <li>
+                    在 <code>csgo/addons/sourcemod/data/</code> 目录下创建 <code>bot_info.json</code> 文件（参照上文 5.4 章节）。
+                </li>
+                <li>
+                    在 <code>csgo/addons/sourcemod/gamedata/</code> 目录下创建 <code>botstuff.games</code> 文件。这个文件通常由插件作者提供；如果没有，插件将无法正常工作，因为它需要知道游戏内部函数的内存地址。你可能需要从插件的 GitHub 仓库或发布页面下载此文件。
+                    <p class="highlight">通常，<code>.games</code> 文件是针对特定游戏版本编译的。虽然游戏不再更新了，但一些插件是在老的游戏版本编译的，所以上古版本可能会失效或导致服务器崩溃。</p>
+                </li>
+                <li>
+                    如果你使用 <code>bot_nades.txt</code> 中的 <code>"replay"</code> 功能，确保在 <code>csgo/addons/sourcemod/data/botmimic/</code> 目录下放置对应的 <code>.rec</code> 文件。你需要自己录制这些文件。
+                </li>
+            </ol>
+
+            <h3 id="using-team-command">6.4. 使用 <code>team</code> 命令</h3>
+            <p>
+                安装并配置好插件后，就可以在服务器上愉快地玩耍了！
+            </p>
+            <ol>
+                <li>
+                    <strong>重启服务器或刷新插件：</strong> 上传文件后，重启你的 CS:GO 服务器，或者在服务器控制台输入 <code>sm plugins refresh</code> 来加载新插件。
+                </li>
+                <li>
+                    <strong>添加 Bot：</strong> 在游戏中打开控制台（通常是 ` 键），输入 <code>bot_kick all</code> 清除现有 Bot。
+                </li>
+                <li>
+                    使用自定义的 <code>team</code> 命令来加载你预设的 Bot 团队：
+                    <ul>
+                        <li><code>team &lt;团队名称&gt; &lt;t|ct&gt;</code></li>
+                        <li>例如：<code>team NaVi t</code></li>
+                        <li>例如：<code>team Astralis ct</code></li>
+                        <li>例如：<code>team MyCustomTeam t</code></li>
+                    </ul>
+                </li>
+                <li>
+                    观察你的 Bot 们在游戏中表现出惊人的智能行为！
+                </li>
+            </ol>
+
+            <h2 id="troubleshooting">7. 常见问题与排查</h2>
+            <ul>
+                <li>
+                    <strong>插件未加载：</strong>
+                    <ul>
+                        <li>检查 <code>csgo/addons/sourcemod/plugins/</code> 目录下是否有 <code>.smx</code> 文件。</li>
+                        <li>检查服务器控制台日志，是否有 SourceMod 相关的错误信息。</li>
+                        <li>确保 MetaMod 和 SourceMod 本身已正确安装并运行（在控制台输入 <code>meta version</code> 和 <code>sm version</code>）。</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Bot 行为异常或服务器崩溃：</strong>
+                    <ul>
+                        <li><strong><code>.games</code> 文件不兼容：</strong> 这是最常见的问题。如果插件更新了，旧的 <code>botstuff.games</code> 文件可能不再有效。你需要等待插件作者发布更新的 <code>.games</code> 文件。</li>
+                        <li><strong>插件错误：</strong> 检查在你操作后服务器控制台或 <code>sourcemod/logs</code> 中是否有 SourceMod 错误日志。</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong><code>team</code> 命令无效：</strong>
+                    <ul>
+                        <li>检查 <code>configs/bot_rosters.txt</code> 文件路径是否正确，内容格式是否符合 KeyValues 标准（括号和引号是否匹配）。</li>
+                        <li>命令拼写是否正确：<code>team &lt;TeamName&gt; &lt;t|ct&gt;</code>。</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Bot 不投掷预设手雷或模仿动作：</strong>
+                    <ul>
+                        <li>确保 <code>bot_nades.txt</code> 文件路径和格式正确。</li>
+                        <li>确保 <code>"replay"</code> 中指定的文件名在 <code>addons/sourcemod/data/botmimic/</code> 目录下存在，且是有效的 <code>.rec</code> 文件。</li>
+                        <li>确认 BotMimic 插件已正确安装和加载。</li>
+                        <li>检查 <code>nadedefindex</code> 是否正确对应手雷类型。</li>
+                        <li>Bot 不会每次都投掷，它会等待时机和距离。</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Bot 没有职业选手的准星或超能力：</strong>
+                    <ul>
+                        <li>检查 <code>data/bot_info.json</code> 文件路径是否正确，内容格式是否符合 JSON 标准。</li>
+                        <li>检查 Bot 的名字是否与 <code>bot_info.json</code> 中的键完全匹配（大小写敏感）。</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h2 id="conclusion">8. 总结</h2>
+            <p>
+                通过这份详尽的指南，你现在应该对 <code>bot_stuff_manico_20250813.sp</code> 插件的功能、实现原理以及如何自定义它有了全面的了解。这个插件极大地提升了 CS:GO Bot 的智能水平，让它们表现得更像人类玩家，无论是经济管理、策略移动、还是精准射击和投掷，都能带来更具挑战性和趣味性的游戏体验。
+            </p>
+            <p>
+                尽情享受你的Bot吧！如果在自定义过程中有任何疑问，可以参考本文档或寻求 SourceMod 社区的帮助。
+            </p>
+            <div class="footer-links">
+                <p>如果你对Bot的设置或CS:GO Bot系统仍有疑问，或者想和更多爱好者交流，欢迎加群或者关注我。</p>
+                <p><a href="https://qm.qq.com/q/PaVJyWSXwy" target="_blank">un1的小群</a></p>
+                <p><a href="https://space.bilibili.com/510000125" target="_blank">un1的b站主页</a></p>
+            </div>
+        </main>
+    </div>
+    <script>
+        // 平滑滚动逻辑
+        document.querySelectorAll('nav a').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                
+                // For details summaries, if clicking on a link inside an open details,
+                // ensure the details summary itself becomes focused.
+                // Or simply scroll to the target.
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+
+                // 尝试让父级details展开 (如果点击到的是子元素)
+                let parentDetails = this.closest('details');
+                while (parentDetails) {
+                    parentDetails.open = true;
+                    parentDetails = parentDetails.parentElement.closest('details');
+                }
+            });
+        });
+
+        // 昼夜模式切换逻辑
+        const themeSwitcher = document.getElementById('theme-switcher');
+        const htmlElement = document.documentElement; // 获取 <html> 元素
+
+        // 加载时根据 localStorage 设置主题
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            htmlElement.classList.add(savedTheme);
+            themeSwitcher.textContent = savedTheme === 'dark-mode' ? '切换昼间模式' : '切换夜间模式';
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            // 如果用户系统偏好暗色模式，默认也设为暗色模式
+            htmlElement.classList.add('dark-mode');
+            localStorage.setItem('theme', 'dark-mode');
+            themeSwitcher.textContent = '切换昼间模式';
+        } else {
+            htmlElement.classList.add('light-mode'); // 显式添加 light-mode (可选，因为 light 是默认)
+            localStorage.setItem('theme', 'light-mode');
+            themeSwitcher.textContent = '切换夜间模式';
+        }
+
+        themeSwitcher.addEventListener('click', () => {
+            if (htmlElement.classList.contains('dark-mode')) {
+                htmlElement.classList.remove('dark-mode');
+                htmlElement.classList.add('light-mode');
+                localStorage.setItem('theme', 'light-mode');
+                themeSwitcher.textContent = '切换夜间模式';
+            } else {
+                htmlElement.classList.remove('light-mode');
+                htmlElement.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark-mode');
+                themeSwitcher.textContent = '切换昼间模式';
+            }
+        });
+
+        // 确保深层目录的锚点能展开父级details
+        // 当页面加载并滚动到某个锚点时，需要确保其父级 details 标签是展开的
+        function ensureDetailsOpenForHash() {
+            const hash = window.location.hash;
+            if (hash) {
+                let currentElement = document.querySelector(hash);
+                if (currentElement) {
+                    let parentDetails = currentElement.closest('details');
+                    while (parentDetails) {
+                        parentDetails.open = true;
+                        parentDetails = parentDetails.parentElement.closest('details');
+                    }
+                }
+            }
+        }
+        // 在页面加载后执行一次
+        window.addEventListener('load', ensureDetailsOpenForHash);
+        // 监听hash变化（如直接修改URL的hash）
+        window.addEventListener('hashchange', ensureDetailsOpenForHash);
+
+    </script>
+</body>
+</html>

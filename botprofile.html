@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS:GO Bot 视角阻尼系统设置导论</title>
+
+    <!-- 引入 KaTeX 用于渲染 LaTeX 公式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0KOVEMVIARBEGEOTNAD9oR2+pLRdaUhcmDU4dwKGaGnaD/bzJxMXওর" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+
+    <style>
+        /* --- 字体引入 --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap');
+
+        /* --- CSS变量定义 --- */
+        :root {
+            /* 默认深色主题 */
+            --bg-color: #111010; --surface-color: #1a1a1a; --primary-text: #EAEAEA; --secondary-text: #A0A0A0; --title-text: #FFFFFF;
+            --accent-color: #4cabff; --accent-glow: rgba(76, 171, 255, 0.3); --border-color: #333333; --code-bg: #222222;
+            --shadow-color: rgba(0, 0, 0, 0.4); --font-main: 'Inter', sans-serif; --font-code: 'Fira Code', monospace;
+            --success-color: #34d399; --warning-color: #f59e0b;
+        }
+        html.light-mode {
+            /* 浅色主题 */
+            --bg-color: #f7f7f8; --surface-color: #ffffff; --primary-text: #333333; --secondary-text: #6b7280; --title-text: #111827;
+            --accent-color: #006ae6; --accent-glow: rgba(0, 106, 230, 0.15); --border-color: #e5e7eb; --code-bg: #f3f4f6;
+            --shadow-color: rgba(0, 0, 0, 0.08); --success-color: #10b981; --warning-color: #f59e0b;
+        }
+
+        /* --- 全局重置与基础样式 --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            background-color: var(--bg-color); color: var(--primary-text); font-family: var(--font-main);
+            font-size: 17px; line-height: 1.8; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+            transition: background-color 0.3s ease;
+        }
+        
+        /* --- 核心布局：侧边栏 + 主内容 --- */
+        .page-wrapper {
+            display: grid; grid-template-columns: 1fr; max-width: 1200px; margin: 0 auto; padding: 0 1rem;
+        }
+        main { min-width: 0; }
+
+        /* --- 左侧目录 (TOC) --- */
+        .table-of-contents {
+            display: none; position: sticky; top: 80px; height: calc(100vh - 100px);
+            overflow-y: auto; align-self: start;
+        }
+        .table-of-contents .toc-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--secondary-text); margin-bottom: 1rem; }
+        .table-of-contents ul { list-style: none; padding-left: 0; }
+        .table-of-contents li { margin-bottom: 0.25rem; }
+        .table-of-contents ul ul { /* 嵌套列表的样式 */
+            padding-left: 1rem; margin-top: 0.25rem;
+        }
+        .table-of-contents a { display: block; text-decoration: none; color: var(--secondary-text); font-size: 0.9rem; font-weight: 500; padding: 0.5rem 1rem; border-left: 2px solid var(--border-color); transition: all 0.2s ease; }
+        .table-of-contents a:hover { color: var(--primary-text); background-color: var(--code-bg); }
+        .table-of-contents a.active { color: var(--accent-color); border-left-color: var(--accent-color); font-weight: 600; transform: translateX(3px); }
+
+        /* --- 主题切换按钮 --- */
+        #theme-toggle { position: fixed; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 50%; background-color: var(--surface-color); border: 1px solid var(--border-color); cursor: pointer; z-index: 1000; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px var(--shadow-color); overflow: hidden; transition: all 0.3s ease; }
+        #theme-toggle svg { width: 20px; height: 20px; position: absolute; transition: transform 0.3s ease, opacity 0.3s ease; }
+        #theme-toggle .sun-icon { fill: var(--primary-text); opacity: 0; transform: translateY(20px); }
+        #theme-toggle .moon-icon { fill: var(--primary-text); opacity: 1; transform: translateY(0); }
+        html.light-mode #theme-toggle .sun-icon { opacity: 1; transform: translateY(0); }
+        html.light-mode #theme-toggle .moon-icon { opacity: 0; transform: translateY(-20px); }
+
+        /* --- 头部 --- */
+        .header { text-align: center; margin: 4rem 0; }
+        .header h1 { font-size: 2.5rem; font-weight: 700; line-height: 1.2; color: var(--title-text); margin-bottom: 0.75rem; text-shadow: 0 0 20px var(--accent-glow); transition: all 0.3s ease; }
+        .header .subtitle { font-size: 1.1rem; color: var(--secondary-text); margin-bottom: 1.5rem; }
+        .header .author { font-size: 0.9rem; color: var(--secondary-text); line-height: 1.5; }
+
+        /* --- 通用内容排版 --- */
+        section { scroll-margin-top: 80px; }
+        h3, h4 { color: var(--title-text); transition: color 0.3s ease; }
+        h3 { font-size: 1.7rem; font-weight: 600; margin-top: 3.5rem; margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); }
+        h4 { font-size: 1.25rem; font-weight: 600; margin-top: 2.5rem; margin-bottom: 1rem; }
+        p, ul, ol { margin-bottom: 1.25rem; }
+        ul, ol { padding-left: 1.5rem; }
+        li { margin-bottom: 0.6rem; }
+        strong { color: var(--accent-color); font-weight: 600; transition: color 0.3s ease; }
+        hr { border: 0; height: 1px; background-image: linear-gradient(to right, transparent, var(--border-color), transparent); margin: 4rem 0; }
+        a.annotation-link { color: var(--accent-color); text-decoration: none; border-bottom: 1px dashed var(--accent-color); cursor: help; }
+
+        /* --- 代码、公式、卡片 --- */
+        code { font-family: var(--font-code); background-color: var(--code-bg); color: var(--primary-text); padding: 0.2em 0.4em; border-radius: 5px; font-size: 0.9em; transition: all 0.3s ease; }
+        .katex-display { background-color: var(--surface-color); padding: 1.5rem; margin: 2rem 0; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border-color); box-shadow: 0 4px 15px var(--shadow-color); transition: all 0.3s ease; }
+        .katex-display:hover { box-shadow: 0 0 20px var(--accent-glow); }
+        .template-card { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 2rem; box-shadow: 0 2px 8px var(--shadow-color); transition: all 0.3s ease; }
+        .template-card > h4:first-child { margin-top: 0; }
+
+        /* --- 参数分析器 (Calculator) --- */
+        .calculator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
+        .input-group label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--secondary-text); }
+        .input-group input { width: 100%; padding: 0.75rem; font-family: var(--font-code); font-size: 1rem; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--primary-text); transition: all 0.2s ease; }
+        .input-group input:focus { border-color: var(--accent-color); outline: none; box-shadow: 0 0 0 3px var(--accent-glow); }
+        #calculate-btn { width: 100%; padding: 0.8rem; font-size: 1rem; font-weight: 600; color: #fff; background-color: var(--accent-color); border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; }
+        #calculate-btn:hover { filter: brightness(1.1); }
+        #analysis-result { margin-top: 2rem; padding: 1.5rem; border-top: 1px dashed var(--border-color); }
+        #analysis-result ul { list-style-type: none; padding-left: 0; }
+        #analysis-result li { margin-bottom: 0.75rem; }
+        #analysis-result .warn { color: var(--warning-color); }
+        #analysis-result .ok { color: var(--success-color); }
+
+        /* --- 脚注/注释区域 --- */
+        .annotations-section { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border-color); }
+
+        /* --- 响应式设计 --- */
+        @media (min-width: 1024px) {
+            .page-wrapper { grid-template-columns: 240px 1fr; gap: 4rem; }
+            .table-of-contents { display: block; }
+        }
+        @media (max-width: 768px) {
+            body { font-size: 16px; } .header h1 { font-size: 2rem; } h3 { font-size: 1.5rem; }
+        }
+    </style>
+    
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'light') document.documentElement.classList.add('light-mode');
+        })();
+    </script>
+</head>
+<body>
+    
+    <button id="theme-toggle" aria-label="Toggle theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.697 6.303a.75.75 0 010 1.06l-1.591 1.591a.75.75 0 11-1.06-1.06l1.591-1.591a.75.75 0 011.06 0zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5h2.25a.75.75 0 01.75.75zM17.636 17.636a.75.75 0 01-1.06 0l-1.591-1.591a.75.75 0 111.06-1.06l1.591 1.591a.75.75 0 010 1.06zM12 21.75a.75.75 0 01-.75-.75v-2.25a.75.75 0 011.5 0v2.25a.75.75 0 01-.75-.75zM6.303 18.697a.75.75 0 01-1.06 0l-1.591-1.591a.75.75 0 111.06-1.06l1.591 1.591a.75.75 0 010 1.06zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM6.343 7.343a.75.75 0 010-1.06l1.591-1.591a.75.75 0 111.06 1.06L7.403 7.343a.75.75 0 01-1.06 0z"/></svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.981A10.503 10.503 0 0112 22.5 10.5 10.5 0 011.5 12c0-3.374 1.558-6.444 4.028-8.472a.75.75 0 01.819.162z"/></svg>
+    </button>
+    
+    <div class="page-wrapper">
+        <nav class="table-of-contents" id="toc-container">
+            <div class="toc-title">ON THIS PAGE</div>
+            <ul id="toc-list"></ul>
+        </nav>
+
+        <main>
+            <header class="header">
+                <h1>CS:GO Bot 视角阻尼系统</h1>
+                <p class="subtitle">一份关于 botprofile 瞄准参数的深入剖析</p>
+                <p class="author">作者: un1<br>powered by Gemini</p>
+            </header>
+            
+            <section id="s-preface">
+                <h3 id="s-preface">前言</h3>
+                <p>你是否觉得游戏默认BOT过于迟钝，无法提供有效练习？或者，想创造一个能模仿顶级Pro的Bot作为专属陪练？</p>
+                <p>通过修改 <strong class="annotation-link" href="#anno-botprofile">botprofile.db</strong> 文件中的几个参数，你就能完全掌控BOT的瞄准行为。本导论将以最直观的方式，带你走进“BOT改造”的世界。</p>
+            </section>
+            
+            <hr>
+
+            <section id="s-chapter-1">
+                <h3 id="s-chapter-1">第一章：物理学基础 - 二阶阻尼系统</h3>
+                <p>BOT的瞄准系统在物理学上是一个经典的“质量-弹簧-阻尼器系统”，亦称二阶系统。</p>
+                <p>想象一个悬挂在弹簧上的重物，拉开后松手，它会来回振荡并最终停止。BOT的准星瞄准过程与此完全相同：</p>
+                <ul>
+                    <li><strong>质量 ($m$)</strong>: 准星的“惯性”。我们简化为 $m=1$。</li>
+                    <li><strong>弹簧 (Spring)</strong>: 将准星“拉”向目标的力。弹簧越硬，拉力越强，启动越快。这就是<strong>刚度 ($k$)</strong>。</li>
+                    <li><strong>阻尼器 (Damper)</strong>: 对抗运动的“阻力”，如同汽车减震器。它负责“刹车”，防止无限振荡。这就是<strong>阻尼 ($c$)</strong>。</li>
+                </ul>
+                <p>这三者遵循一个核心运动方程：</p>
+                $$m\ddot{x} + c\dot{x} + kx = 0$$
+                <p>其中，$x$ 是准星与目标的距离，$\dot{x}$ 是速度，$\ddot{x}$ 是加速度。此方程描述了系统如何从偏差状态 ($x > 0$) 回归平衡 ($x=0$)。</p>
+                
+                <h4 id="s-sub-1-1">关键概念：阻尼比</h4>
+                <p>系统的行为由<strong>阻尼比 (Damping Ratio, $\zeta$)</strong>决定，它精确描述了“刹车”与“引擎”的匹配度。</p>
+                $$\zeta = \frac{c}{c_{\text{crit}}} = \frac{c}{2\sqrt{mk}}$$
+                <p>由于我们视质量 $m=1$，公式简化为：</p>
+                $$\zeta = \frac{c}{2\sqrt{k}}$$
+                <p>根据 $\zeta$ 的值，系统呈现三种行为模式：</p>
+                <ol>
+                    <li><strong>欠阻尼 (Underdamped, $\zeta < 1$)</strong>: 刹车不足。系统会快速冲向目标并<strong>过冲 (Overshoot)</strong>，即超过目标后再反向修正。这模拟了人类带有微小修正的侵略性甩枪。</li>
+                    <li><strong>临界阻尼 (Critically Damped, $\zeta = 1$)</strong>: 完美制动。理论最优解，以<strong>最快速度</strong>到达目标且<strong>无过冲</strong>。如同完美的机器人。</li>
+                    <li><strong>过阻尼 (Overdamped, $\zeta > 1$)</strong>: 刹车过猛。系统缓慢平滑地接近目标，无过冲风险但牺牲了速度。这模拟了极稳定的跟枪和架点。</li>
+                </ol>
+            </section>
+            
+            <hr>
+
+            <section id="s-chapter-2">
+                <h3 id="s-chapter-2">第二章：核心概念 - 瞄准如赛车</h3>
+                <p>将BOT的每次瞄准想象成一辆赛车冲向终点。控制这辆“赛车”的是三个核心参数：</p>
+                 <p><em>注意：实际上还有后缀为<code>_Attack</code>的三个对应参数，设置思路完全相同。</em></p>
+                <ol>
+                    <li><strong><code>LookAngleStiffnessNormal</code> (刚度 $k$) - 引擎马力</strong></li>
+                    <li><strong><code>LookAngleDampingNormal</code> (阻尼 $c$) - 刹车系统</strong></li>
+                    <li><strong><code>LookAngleAccelNormal</code> (加速度) - 油门响应</strong></li>
+                </ol>
+                <p>我们的目标就是调校“引擎”($k$)与“刹车”($c$)，精确控制赛车的<strong>阻尼比 ($\zeta$)</strong>，使其以我们期望的方式运动。</p>
+            </section>
+            
+            <hr>
+
+            <section id="s-chapter-3">
+                <h3 id="s-chapter-3" data-toc-title="第三章：核心三参数详解">第三章：核心三参数详解</h3><!-- Added data-toc-title -->
+                <h4 id="s-sub-3-1" data-toc-title="LookAngleStiffnessNormal (刚度 k)"><code>LookAngleStiffnessNormal</code> (刚度 $k$)</h4><!-- Added data-toc-title -->
+                <ul>
+                    <li><strong>作用:</strong> 瞄准的“力量”或“爆发力”。数值越高，启动越快，感觉越“猛”。</li>
+                    <li><strong>总结:</strong> <strong>刚度决定了BOT瞄准的启动速度。</strong></li>
+                </ul>
+                <h4 id="s-sub-3-2" data-toc-title="LookAngleDampingNormal (阻尼 c)"><code>LookAngleDampingNormal</code> (阻尼 $c$)</h4><!-- Added data-toc-title -->
+                <ul>
+                    <li><strong>作用:</strong> 瞄准的“稳定器”或“刹车”。负责在准星到达目标时减速，防止“甩过头”。</li>
+                    <li><strong>总结:</strong> <strong>阻尼决定了BOT瞄准停止时的稳定性。</strong></li>
+                </ul>
+                <h4 id="s-sub-3-3"><code>LookAngleAccelNormal</code> (加速度)</h4>
+                <ul>
+                    <li><strong>作用:</strong> 瞄准加速度的上限。值太低会限制性能。</li>
+                    <li><strong>总结:</strong> <strong>将其设为超大值即可</strong>，避免成为瓶颈。推荐值：<code>200000.0</code>。</li>
+                </ul>
+            </section>
+            
+            <hr>
+
+            <section id="s-chapter-4">
+                <h3 id="s-chapter-4" data-toc-title="第四章：黄金法则 - 刚度与阻尼的配比">第四章：黄金法则 - 刚度与阻尼的配比</h3><!-- Added data-toc-title -->
+                <p><strong>刚度（引擎）与阻尼（刹车）必须相互匹配。</strong> 如何找到完美的“刹车”来适配你的“引擎”？这就是我们的魔法公式：</p>
+                $$c_{\text{crit}} = 2\sqrt{k}$$
+                <p>这个 $c_{\text{crit}}$ 是实现临界阻尼 ($\zeta = 1$) 的完美值，也是我们所有调校的<strong>基准点</strong>。</p>
+            </section>
+            
+            <hr>
+            
+            <section id="s-chapter-5">
+                <h3 id="s-chapter-5">第五章：配置模板</h3>
+                <p>根据你的需求，直接从以下模板中选择，或以此为基础进行微调。</p>
+                
+                <div class="template-card">
+                    <h4 id="s-template-1">模板一：Pro Player (职业选手)</h4>
+                    <ul>
+                        <li><code style="display: inline-block;">LookAngleStiffnessNormal</code> ($k$) = <code>3600.0</code></li><!-- Modified for LaTeX -->
+                        <li><em>计算临界阻尼：$c_{\text{crit}} = 2\sqrt{3600} = 120.0$</em></li>
+                        <li><code style="display: inline-block;">LookAngleDampingNormal</code> ($c$) = <code>100.0</code></li><!-- Modified for LaTeX -->
+                        <li><em>分析：阻尼 $c=100$ 小于临界值 $120$，阻尼比 $\zeta \approx 0.83$。这将带来一次快速、可控的过冲，模拟职业哥的肌肉记忆。</em></li>
+                    </ul>
+                </div>
+
+                <div class="template-card">
+                    <h4 id="s-template-2">模板二：The God Machine (玩机器)</h4>
+                    <ul>
+                        <li><code style="display: inline-block;">LookAngleStiffnessNormal</code> ($k$) = <code>7200.0</code></li><!-- Modified for LaTeX -->
+                        <li><em>计算临界阻尼：$c_{\text{crit}} = 2\sqrt{7200} \approx 169.7$</em></li>
+                        <li><code style="display: inline-block;">LookAngleDampingNormal</code> ($c$) = <code>169.7</code></li><!-- Modified for LaTeX -->
+                        <li><em>分析：阻尼 $c$ 与临界值 $c_{\text{crit}}$ 相等，阻尼比 $\zeta = 1$。实现理论最快无过冲瞄准。</em></li>
+                    </ul>
+                </div>
+
+                <div class="template-card">
+                    <h4 id="s-template-3">模板三：The Anchor (稳如泰山)</h4>
+                    <ul>
+                        <li><code style="display: inline-block;">LookAngleStiffnessNormal</code> ($k$) = <code>3000.0</code></li><!-- Modified for LaTeX -->
+                        <li><em>计算临界阻尼：$c_{\text{crit}} = 2\sqrt{3000} \approx 109.5$</em></li>
+                        <li><code style="display: inline-block;">LookAngleDampingNormal</code> ($c$) = <code>130.0</code></li><!-- Modified for LaTeX -->
+                        <li><em>分析：阻尼 $c=130$ 大于临界值 $109.5$，阻尼比 $\zeta \approx 1.19$。消除任何过冲，带来磁铁般吸附手感。</em></li>
+                    </ul>
+                </div>
+            </section>
+            
+            <hr>
+
+            <section id="s-calculator">
+                <h3 id="s-calculator">自定义参数分析器</h3>
+                <p>在这里输入你的参数，看看它们组合起来会产生什么样的瞄准风格。</p>
+                <p>默认的值是un1目前服务器自用的。</p>
+                <div class="template-card">
+                    <div class="calculator-grid">
+                        <!-- Moved Accel to the left -->
+                        <div class="input-group">
+                            <label for="input-accel">Acceleration</label>
+                            <input type="number" id="input-accel" value="200000.0">
+                        </div>
+                        <div class="input-group">
+                            <label for="input-stiffness">Stiffness (k)</label>
+                            <input type="number" id="input-stiffness" value="3600.0">
+                        </div>
+                        <div class="input-group">
+                            <label for="input-damping">Damping (c)</label>
+                            <input type="number" id="input-damping" value="100.0">
+                        </div>
+                    </div>
+                    <button id="calculate-btn">分析参数</button>
+                    <div id="analysis-result">
+                        <p style="text-align: center; color: var(--secondary-text);">输入参数后点击上方按钮进行分析。</p>
+                    </div>
+                </div>
+            </section>
+
+     
+            <hr>
+
+            <section id="s-conclusion">
+                <h3 id="s-conclusion">结语</h3>
+                <p>你已掌握BOT瞄准系统的核心秘密。大胆尝试，运用上方的分析器检验你的想法，创造出想象中的任何对手。祝你在自定义BOT的世界里玩得愉快！</p>
+            </section>
+
+            <hr>
+
+            <section id="s-qq-group">
+                <h3 id="s-qq-group">有疑问吗？</h3>
+                <p>如果你对Bot的设置或CS:GO Bot系统仍有疑问，或者想和更多爱好者交流，欢迎加入我们的QQ群！</p>
+                <p><a href="https://qm.qq.com/q/PaVJyWSXwy" target="_blank" style="color: var(--accent-color); text-decoration: underline;">un1的小群</a></p>
+                <p><a href="https://space.bilibili.com/510000125" target="_blank" style="color: var(--accent-color); text-decoration: underline;">un1的b站主页</a></p>
+            </section>
+
+             <footer class="annotations-section" id="annotations">
+                <h3 id="annotations-title">注释</h3>
+                <p id="anno-botprofile"><strong>botprofile.db:</strong> 在SteamLibrary\steamapps\common\Counter-Strike Global Offensive\csgo</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- 核心功能脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // === 页面初始化函数调用 ===
+            setupKaTeX();
+            setupThemeToggle();
+            setupTOC();
+            setupCalculator();
+
+            // === 函数定义 ===
+
+            function setupKaTeX() {
+                // Modified options to exclude code blocks from rendering
+                renderMathInElement(document.body, { 
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true}, 
+                        {left: '$', right: '$', display: false}
+                    ], 
+                    throwOnError: false,
+                    // Exclude elements with node name 'CODE' from KaTeX processing
+                    // This prevents LaTeX within <code> tags from being rendered
+                    ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+                });
+            }
+
+            function setupThemeToggle() {
+                const themeToggle = document.getElementById('theme-toggle');
+                const htmlEl = document.documentElement;
+                themeToggle.addEventListener('click', () => {
+                    htmlEl.classList.toggle('light-mode');
+                    localStorage.setItem('theme', htmlEl.classList.contains('light-mode') ? 'light' : 'dark');
+                });
+            }
+
+            /**
+             * [已优化] 动态生成具有层级结构的目录
+             * 优先读取 data-toc-title 属性，否则使用 textContent
+             */
+            function setupTOC() {
+                const tocList = document.getElementById('toc-list');
+                const mainContent = document.querySelector('main');
+                if (!tocList || !mainContent) return;
+
+                // 清空旧目录，防止重复生成
+                tocList.innerHTML = '';
+                
+                // 选择所有带有ID的H3和H4标题
+                const headings = mainContent.querySelectorAll('h3[id], h4[id]');
+                const tocLinks = [];
+
+                let lastH3ListItem = null;
+                let subList = null;
+
+                headings.forEach(heading => {
+                    const id = heading.id;
+                    const level = heading.tagName;
+                    // 优先使用data-toc-title，如果没有则使用textContent
+                    const text = heading.dataset.tocTitle || heading.textContent.trim();
+
+                    const listItem = document.createElement('li');
+                    const link = document.createElement('a');
+                    link.href = `#${id}`;
+                    link.textContent = text;
+                    link.className = 'toc-link';
+                    
+                    listItem.appendChild(link);
+                    tocLinks.push(link);
+
+                    if (level === 'H3') {
+                        tocList.appendChild(listItem);
+                        lastH3ListItem = listItem; // 记录当前H3的列表项
+                        subList = null; // 重置子列表，为下一个H3做准备
+                    } else if (level === 'H4' && lastH3ListItem) {
+                        // 如果这是第一个H4，为其父H3创建一个新的<ul>
+                        if (!subList) {
+                            subList = document.createElement('ul');
+                            lastH3ListItem.appendChild(subList);
+                        }
+                        subList.appendChild(listItem);
+                    }
+                });
+                
+                // 滚动监听逻辑
+                const observer = new IntersectionObserver(entries => {
+                    entries.forEach(entry => {
+                        const id = entry.target.getAttribute('id');
+                        const activeLink = document.querySelector(`.toc-link[href="#${id}"]`);
+
+                        // 确保链接和目标都存在，并且当前节是交叉的且至少一半可见
+                        if (activeLink && entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                            // 移除所有链接的active类
+                            tocLinks.forEach(l => l.classList.remove('active'));
+                            // 添加active类到当前可见的链接
+                            activeLink.classList.add('active');
+                        }
+                    });
+                }, { rootMargin: "0px 0px -60% 0px", threshold: 0.6 });
+
+                headings.forEach(heading => {
+                    observer.observe(heading);
+                });
+            }
+
+
+            // === 计算器核心逻辑 ===
+            function setupCalculator() {
+                const k_input = document.getElementById('input-stiffness');
+                const c_input = document.getElementById('input-damping');
+                const accel_input = document.getElementById('input-accel');
+                const calculateBtn = document.getElementById('calculate-btn');
+                const resultDiv = document.getElementById('analysis-result');
+
+                calculateBtn.addEventListener('click', () => {
+                    const k = parseFloat(k_input.value);
+                    const c = parseFloat(c_input.value);
+                    const accel = parseFloat(accel_input.value);
+
+                    if (isNaN(k) || isNaN(c) || isNaN(accel) || k <= 0) {
+                        resultDiv.innerHTML = `<p class="warn">请输入有效的正数参数值！</p>`;
+                        return;
+                    }
+
+                    const c_crit = 2 * Math.sqrt(k);
+                    const zeta = c / c_crit;
+
+                    let analysisHTML = '<h4>分析结果</h4><ul>';
+
+                    // 1. 加速度检查
+                    if (accel < 100000) {
+                        analysisHTML += `<li><span class="warn">加速度警告:</span> 你的值 (${accel}) 可能会限制瞄准性能，建议设为 <code>200000</code> 或更高。</li>`;
+                    } else {
+                        analysisHTML += `<li><span class="ok">加速度:</span> 充足，未成为性能瓶颈。</li>`;
+                    }
+                    
+                    // 2. 整数检查提醒
+                    if (accel % 1 === 0) { // Check if accel is an integer
+                        analysisHTML += `<li><span class="warn">【注意】</span> 为避免潜在BUG，建议赋值为浮点数，例如 <code>${accel}.0</code> 而非 <code>${accel}</code>。</li>`;
+                    }
+
+                    // 3. 临界阻尼 & 阻尼比
+                    analysisHTML += `<li><strong>临界阻尼 ($c_{crit}$):</strong> <code>${c_crit.toFixed(2)}</code> (这是当前刚度下的“完美刹车”值)</li>`;
+                    analysisHTML += `<li><strong>你的阻尼比 ($\zeta$):</strong> <code>${zeta.toFixed(3)}</code> (这是决定瞄准风格的关键)</li>`;
+                    
+                    // 4. 风格诊断
+                    let styleDiagnosis = '';
+                    if (zeta < 0.98) {
+                        styleDiagnosis = `<strong style="color: #f87171">欠阻尼 (Underdamped)</strong>: 瞄准启动迅速，到达目标时会产生一次<strong>过冲(Overshoot)</strong>，模拟了人类快速甩枪后的微小修正。风格极具侵略性，但可能牺牲稳定性。`;
+                    } else if (zeta > 1.02) {
+                        styleDiagnosis = `<strong style="color: #60a5fa">过阻尼 (Overdamped)</strong>: 瞄准过程极为平滑，准星会“缓慢”地滑向目标，<strong>绝无过冲</strong>。提供了如磁铁般的“黏滞感”，适合稳定跟枪和架点，但牺牲了极限速度。`;
+                    } else {
+                        styleDiagnosis = `<strong style="color: #34d399">临界阻尼 (Critically Damped)</strong>: 理论上的完美形态！以<strong>最快速度</strong>到达目标且<strong>没有任何过冲</strong>。这是机器人般精准、高效的瞄准方式。`;
+                    }
+                    analysisHTML += `<li><strong>风格诊断:</strong> ${styleDiagnosis}</li>`;
+                    
+                    analysisHTML += '</ul>';
+                    resultDiv.innerHTML = analysisHTML;
+
+                    // 渲染公式
+                    renderMathInElement(resultDiv, { delimiters: [{left: '$', right: '$', display: false}]});
+                });
+            }
+        });
+    </script>
+</body>
+</html>
