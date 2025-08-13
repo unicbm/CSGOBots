@@ -4,4 +4,6 @@
 *   **Botprofile 解析**：详细解释 BOT 视角、行为和参数的配置文件。
 *   **Betterbots 插件**：探索强大的 Betterbots 插件及其功能。
 ## 🚀 如何使用
-可以通过icccbm.world访问
+## 🚀 如何使用
+本项目是一个纯前端的静态网页，无需任何服务器配置即可运行。
+您也可以通过 [icccbm.world](https://icccbm.world) 直接访问本项目。
