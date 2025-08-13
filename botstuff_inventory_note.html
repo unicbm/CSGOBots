@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOT 物品栏插件解析 - 为新玩家定制</title>
+    <style>
+        /* 莫兰迪配色方案 */
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #495057; /* 深灰文本 */
+            background-color: #F0F2F5; /* 浅灰背景 */
+            margin: 20px;
+            padding: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #FFFFFF; /* 内容区域白色背景 */
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        h1, h2, h3, h4 {
+            color: #6A8EAE; /* 标题采用柔和的蓝色 */
+            border-bottom: 1px solid #CBD2D8; /* 浅灰蓝色边框 */
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        h1 { font-size: 2.2em; }
+        h2 { font-size: 1.8em; }
+        h3 { font-size: 1.5em; }
+        h4 { font-size: 1.2em; }
+        p {
+            margin-bottom: 1em;
+        }
+        pre {
+            background-color: #E8F6F3; /* 柔和的浅绿色背景 */
+            color: #2A524A; /* 深绿色代码文本 */
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            margin-bottom: 1.5em;
+            border-left: 5px solid #A2B9BD; /* 增加一点边框颜色 */
+        }
+        code {
+            background-color: #E8F6F3;
+            color: #2A524A;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        strong {
+            color: #6A8EAE; /* 强调文字 */
+        }
+        .note {
+            background-color: #F6F9FC; /* 浅米色背景 */
+            border-left: 4px solid #B29DA3; /* 温柔的粉色边框 */
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        a {
+            color: #B29DA3; /* 链接颜色 */
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .author-info {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center;">BOT 物品栏插件解析</h1>
+        <p class="author-info">
+            作者: un1 powered by Gemini<br>
+            一个为CS:GO新手玩家编写的插件代码详解
+        </p>
+
+        <div class="note">
+            <p><strong>写给新手的特别提示：</strong></p>
+            <p>如果你只会基础编译，那这份文档就是为你准备的！这里不会有太多深奥的废话，我们会用最简洁的方式告诉你：这个 SourcePawn 插件的代码长什么样，以及它到底做了什么神奇的事情，让你的服务器里的 BOT 也能拥有好看的武器皮肤、手套、音乐盒等等！</p>
+            <p>SourcePawn 是一种用来编写插件的脚本语言，这些插件就像是给游戏服务器安装的“小工具”，能实现各种有趣的功能。而这份代码，就是给你的 CS:GO 服务器添加一个“BOT 换装系统”！</p>
+        </div>
+
+        <h2>一、插件概览：它是什么？</h2>
+        <p>这个名为 "BOT Inventory" (BOT 物品栏) 的 SourcePawn 插件，顾名思义，它的主要功能就是<strong>给 CS:GO 服务器中的 BOT（机器人）玩家分配虚拟的库存物品</strong>。这意味着 BOT 不再是光秃秃的默认装备，它们可以拥有随机的武器皮肤、手套、音乐盒、勋章（硬币）甚至特工模型和臂章！插件还能处理这些物品的磨损度、种子（图案位置）、贴纸和 StatTrak（计数器）等细节，让 BOT 看起来更真实，更有趣。</p>
+        <p>如果你有一个专注于和 BOT 玩乐、或者想让 BOT 看起来更个性化的个人服务器，这个插件就能派上用场！</p>
+
+        <h2>二、代码构成详解</h2>
+
+        <h3>2.1 引入头文件（<code>#include</code>）：插件的“工具箱”</h3>
+        <p>在 SourcePawn 中，<code>#include</code> 就像是把别人写好的、现成的代码模块（称为“头文件”）“借”过来用，这样我们就不必从头开始写所有功能了。这些头文件提供了很多与游戏交互、处理数据的“工具”。</p>
+        <pre><code class="language-sourcepawn">#pragma semicolon 1
+
+#include &lt;sourcemod>
+#include &lt;sdkhooks>
+#include &lt;cstrike>
+#include &lt;eItems>
+#include &lt;PTaH>
+#include &lt;bot_steamids>
+#include &lt;kento_rankme/rankme>
+#include &lt;smlib>
+#include &lt;modelch></code></pre>
+        <ul>
+            <li><code>#pragma semicolon 1</code>: 这是一条编译器指令，告诉编译器每条语句都必须以分号 (<code>;</code>) 结尾，这是 SourcePawn 的最佳实践。</li>
+            <li><code>sourcemod</code>: SourceMod 插件框架的核心头文件，提供了插件运行所需的基本函数和结构。</li>
+            <li><code>sdkhooks</code>: 提供在游戏内部特定事件点“插入”我们自己代码的能力（称为“钩子”），比如某个玩家受到伤害时。</li>
+            <li><code>cstrike</code>: 提供了许多与 CS:GO 游戏机制相关的函数和常量，比如团队ID（CT, T）。</li>
+            <li><code>eItems</code>: 这是一个非常重要的自定义头文件（或扩展），它包含了 CS:GO 游戏内所有物品（武器、皮肤、手套、特工、贴纸等）的数据，插件通过它来获取和操作这些物品的信息。</li>
+            <li><code>PTaH</code>: 另一个重要的扩展，提供了更底层的游戏数据修改能力，比如在物品被给予玩家之前或之后进行干预。</li>
+            <li><code>bot_steamids</code>: 看起来是自定义的头文件，用于为 BOT 生成或管理 Steam ID，这对于模拟真实玩家的库存非常关键。</li>
+            <li><code>kento_rankme/rankme</code>: 显然与排名插件 RankMe 有关，用于获取玩家（这里是 BOT）的武器击杀统计数据。</li>
+            <li><code>smlib</code>: SourceMod 扩展库，提供了更多实用的工具函数。</li>
+            <li><code>modelch</code>: 可能是用于修改玩家模型的扩展。</li>
+        </ul>
+
+        <h3>2.2 全局变量（<code>g_</code>）：插件的“数据仓库”</h3>
+        <p>全局变量是在整个插件中都可以访问和使用的数据。这些变量用于存储插件运行时需要记住的各种信息，比如物品的数量、每个 BOT 拥有的物品属性等。</p>
+        <pre><code class="language-sourcepawn">bool g_bLateLoaded;
+int g_iWeaponCount;
+int g_iSkinCount;
+int g_iGloveCount;
+int g_iAgentCount;
+
+// 存储每个BOT玩家的库存数据
+int g_iMusicKit[MAXPLAYERS + 1]; // 音乐盒ID
+int g_iCoin[MAXPLAYERS + 1];     // 勋章/硬币ID
+bool g_bUseCustomPlayer[MAXPLAYERS + 1]; // 是否使用自定义特工模型
+int g_iAgent[MAXPLAYERS + 1][4];         // 特工模型ID (按团队存储)
+bool g_bUsePatch[MAXPLAYERS + 1];        // 是否使用臂章
+bool g_bUsePatchCombo[MAXPLAYERS + 1];   // 臂章组合模式
+int g_iRndPatchCombo[MAXPLAYERS + 1];    // 随机臂章组合类型
+int g_iRndPatch[MAXPLAYERS + 1][4];      // 随机臂章ID
+int g_iRndSamePatch[MAXPLAYERS + 1];     // 同款臂章ID
+
+// 武器和手套的属性
+int g_iStoredKnife[MAXPLAYERS + 1]; // 存储每个BOT的刀具ID
+int g_iSkinDefIndex[MAXPLAYERS + 1][1024]; // 武器皮肤ID (按武器defindex索引)
+float g_fWeaponSkinWear[MAXPLAYERS + 1][1024]; // 武器磨损度
+int g_iWeaponSkinSeed[MAXPLAYERS + 1][1024];   // 武器图案种子
+bool g_bUseStatTrak[MAXPLAYERS + 1][1024];   // 是否有StatTrak
+bool g_bUseSouvenir[MAXPLAYERS + 1][1024];   // 是否是纪念品
+bool g_bUseSticker[MAXPLAYERS + 1][1024];    // 是否有贴纸
+bool g_bUseStickerCombo[MAXPLAYERS + 1][1024]; // 贴纸组合模式
+int g_iRndStickerCombo[MAXPLAYERS + 1][1024];  // 随机贴纸组合类型
+int g_iRndSticker[MAXPLAYERS + 1][1024][4];    // 随机贴纸ID (最多4个)
+int g_iRndSameSticker[MAXPLAYERS + 1][1024];   // 同款贴纸ID
+int g_iItemIDLow[MAXPLAYERS + 1][1024];        // 物品ID低位
+int g_iItemIDHigh[MAXPLAYERS + 1][1024];       // 物品ID高位 (CS:GO物品ID是64位)
+
+int g_iStoredGlove[MAXPLAYERS + 1];      // 存储每个BOT的手套ID
+int g_iGloveSkin[MAXPLAYERS + 1];        // 手套皮肤ID
+float g_fGloveWear[MAXPLAYERS + 1];      // 手套磨损度
+int g_iGloveSeed[MAXPLAYERS + 1];        // 手套图案种子
+int g_iGloveItemIDLow[MAXPLAYERS + 1];   // 手套物品ID低位
+int g_iGloveItemIDHigh[MAXPLAYERS + 1];  // 手套物品ID高位
+
+// StatTrak 相关
+int g_iStatTrakKills[MAXPLAYERS + 1][1024];    // StatTrak 击杀计数
+bool g_bKnifeHasStatTrak[MAXPLAYERS + 1][1024]; // 刀是否有StatTrak
+
+// 特工模型和语音前缀
+char g_szModel[MAXPLAYERS+1][4][128];     // 特工模型路径
+char g_szVOPrefix[MAXPLAYERS+1][4][128];  // 特工语音前缀
+
+// 动态数组，用于存储物品数据
+ArrayList g_ArrayWeapons[128] =  { null, ... }; // 武器皮肤列表
+ArrayList g_ArrayGloves[128] =  { null, ... }; // 手套皮肤列表
+ArrayList g_ArrayTAgents;       // T方特工模型列表
+ArrayList g_ArrayCTAgents;      // CT方特工模型列表
+ArrayList g_ArrayMapWeapons;    // 地图上掉落的武器实体列表
+
+// 刀具的定义索引列表
+int g_iKnifeDefIndex[] =  {
+	500, 503, 505, 506, 507, 508, 509, 512, 514, 515, 516, 517, 518, 519, 520, 521, 522, 523, 525, 526, 527, 528
+};
+
+// SDK 钩子句柄，用于调用游戏内部函数
+Handle g_hSetRank;     // 设置玩家勋章/硬币的函数句柄
+Handle g_hForceUpdate; // 强制更新客户端数据的函数句柄
+
+// 勋章类别枚举，直接从游戏内定义参考。
+enum MedalCategory_t
+{
+	MEDAL_CATEGORY_NONE = -1, 
+	MEDAL_CATEGORY_START = 0, 
+	// ... (其他类别此处省略，不重要)
+	MEDAL_CATEGORY_SEASON_COIN = 5, // 赛季硬币类别，用于设置勋章
+	MEDAL_CATEGORY_COUNT, 
+};</code></pre>
+        <ul>
+            <li><code>MAXPLAYERS + 1</code>: 数组大小通常这样写，因为 SourceMod 的客户端 ID 一般从 1 开始，到 <code>MaxClients</code>。这个宏定义了服务器支持的最大玩家数量。</li>
+            <li><strong>数据存储</strong>：大量的 <code>g_</code> 开头的变量都是用来存储每个 BOT 玩家（通过客户端ID索引）的各种物品属性的。比如武器皮肤的磨损、种子，手套的种类，特工模型等等。这些数据是随机生成然后存储在这里，以便在游戏过程中应用到 BOT 身上。</li>
+            <li><strong><code>ArrayList</code></strong>：这是一种动态数组，可以方便地添加或删除元素，非常适合存储不确定数量的皮肤或特工模型ID。</li>
+            <li><strong><code>g_iKnifeDefIndex[]</code></strong>：硬编码了所有不同种类的刀具在游戏中的定义索引 (DefIndex)，方便随机选择。</li>
+            <li><strong><code>Handle g_hSetRank; Handle g_hForceUpdate;</code></strong>: 这些是“句柄”，你可以理解成 SourceMod 找到了游戏里的一些特定功能（比如“设置玩家勋章”或“强制更新玩家数据”），然后把这些功能的“操作手柄”给了插件，插件就能通过这些手柄来控制这些功能了。</li>
+            <li><code>MedalCategory_t</code>: 这是和游戏内部勋章（硬币）类别对应的枚举，用来告诉游戏我们要设置哪种类型的勋章给玩家。</li>
+        </ul>
+
+        <h3>2.3 插件信息（<code>Plugin myinfo</code>）</h3>
+        <p>这是每个 SourceMod 插件都必须有的基本信息块，用于向服务器显示插件的名称、作者、版本等。</p>
+        <pre><code class="language-sourcepawn">public Plugin myinfo = 
+{
+	name = "BOT Inventory", 
+	author = "manico", 
+	description = "Gives BOTs items.", 
+	version = "1.0.2", 
+	url = "http://steamcommunity.com/id/manico001"
+};</code></pre>
+        <p>这部分信息会在服务器的插件列表中显示，方便管理员查看和管理。</p>
+
+        <h3>2.4 插件加载与初始化</h3>
+
+        <h4><code>public APLRes AskPluginLoad2(...)</code></h4>
+        <p>这个函数在插件加载的早期阶段被调用，用来判断插件是首次加载还是“延迟加载”（即服务器已经运行一段时间后才加载）。</p>
+        <pre><code class="language-sourcepawn">public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] chError, int iErrMax)
+{
+	g_bLateLoaded = bLate;
+	return APLRes_Success;
+}</code></pre>
+        <p><code>g_bLateLoaded = bLate;</code> 这一行将加载状态存入全局变量，方便后续代码判断。如果插件是延迟加载的，需要做一些额外的处理，确保所有物品数据都已同步。</p>
+
+        <h4><code>public void OnPluginStart()</code>：插件启动时！</h4>
+        <p>这是插件真正开始工作的地方。当服务器启动或插件被手动加载时，这个函数会执行一次。它负责进行各种初始化设置、检查依赖、并注册“事件钩子”。</p>
+        <pre><code class="language-sourcepawn">public void OnPluginStart()
+{
+	// 检查是否是CS:GO服务器
+	if (GetEngineVersion() != Engine_CSGO)
+	{
+		SetFailState("Only CS:GO servers are supported!");
+		return;
+	}
+	
+	// 如果是延迟加载，确保物品数据已同步
+	if (g_bLateLoaded)
+	{
+		if (eItems_AreItemsSynced())
+			eItems_OnItemsSynced();
+		else if (!eItems_AreItemsSyncing())
+			eItems_ReSync();
+	}
+	
+	// 检查PTaH扩展版本
+	if (PTaH_Version() &lt; 101000)
+	{
+		char sBuf[16];
+		PTaH_Version(sBuf, sizeof(sBuf));
+		SetFailState("PTaH extension needs to be updated. (Installed Version: %s - Required Version: 1.1.0+) [ Download from: https://ptah.zizt.ru ]", sBuf);
+		return;
+	}
+	
+	// 钩子事件：当玩家进行特定操作时触发
+	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre); // 玩家出生前
+	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre); // 玩家死亡前
+	HookEvent("round_start", Event_OnRoundStart); // 回合开始
+	
+	// 钩子PTaH的物品给予功能
+	PTaH(PTaH_GiveNamedItemPre, Hook, GiveNamedItemPre); // 给予物品之前
+	PTaH(PTaH_GiveNamedItemPost, Hook, GiveNamedItemPost); // 给予物品之后
+	
+	// 如果是特定游戏模式（休闲模式）则钩子武器使用事件
+	ConVar g_cvGameType = FindConVar("game_type");
+	ConVar g_cvGameMode = FindConVar("game_mode");
+	if (g_cvGameType.IntValue == 1 && g_cvGameMode.IntValue == 2)
+		PTaH(PTaH_WeaponCanUsePre, Hook, WeaponCanUsePre);
+	
+	// 钩子比赛结束消息，用于修改结算界面数据
+	HookUserMessage(GetUserMessageId("EndOfMatchAllPlayersData"), OnEndOfMatchAllPlayersData, true);
+	
+	// 从 botinventory.games 文件中加载SDK签名数据
+	GameData hGameData = new GameData("botinventory.games");
+	
+	// 准备SDK调用，以便插件可以直接调用游戏内部函数
+	// CSGO的 SetRank 函数用于设置玩家的勋章/硬币
+	StartPrepSDKCall(SDKCall_Player);
+	PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CCSPlayer::SetRank");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	if (!(g_hSetRank = EndPrepSDKCall()))
+		SetFailState("Failed to get CCSPlayer::SetRank signature");
+	
+	// 准备SDK调用，用于强制更新客户端数据
+	StartPrepSDKCall(SDKCall_Player);
+	PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CGameClient::UpdateAcknowledgedFramecount");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	if (!(g_hForceUpdate = EndPrepSDKCall()))
+		SetFailState("Failed to get CGameClient::UpdateAcknowledgedFramecount signature");
+}</code></pre>
+        <ul>
+            <li><strong>环境检查</strong>：首先检查游戏版本是否是 CS:GO，并确保所需的扩展（如 PTaH）已加载且版本正确。如果条件不满足，插件会停止运行并报错。</li>
+            <li><strong>事件钩子 (<code>HookEvent</code>)</strong>：这是 SourceMod 插件的核心机制之一。通过钩子，插件可以在游戏发生特定事件（比如玩家出生、死亡、回合开始）时，在这些事件发生“前”或“后”执行自定义的代码。
+                <ul>
+                    <li><code>player_spawn</code>: 玩家出生时。</li>
+                    <li><code>player_death</code>: 玩家死亡时。</li>
+                    <li><code>round_start</code>: 回合开始时。</li>
+                </ul>
+            </li>
+            <li><strong>PTaH 钩子</strong>：<code>PTaH</code> 扩展允许更深入地修改游戏行为，这里钩子了物品给予的前后事件，以便插件可以修改即将给予玩家的武器或手套的属性。</li>
+            <li><strong>用户消息钩子 (<code>HookUserMessage</code>)</strong>: <code>EndOfMatchAllPlayersData</code> 是一个在比赛结束时发送给客户端的消息，包含了所有玩家的统计数据。钩子这个消息，我们可以在它发送出去之前修改数据，比如让结算界面的 BOT 也能显示出他们拥有的炫酷皮肤。</li>
+            <li><strong>SDK 调用准备 (<code>StartPrepSDKCall</code>)</strong>: 这是一项高级功能，允许插件直接调用游戏引擎内部的 C++ 函数。插件利用这个功能来修改 BOT 的勋章（<code>CCSPlayer::SetRank</code>）和强制更新客户端视图（<code>CGameClient::UpdateAcknowledgedFramecount</code>），这对于应用自定义库存变化至关重要。这些函数的具体地址或偏移量是从 <code>botinventory.games</code> 这个游戏数据文件里读取的。</li>
+        </ul>
+
+        <h3>2.5 物品数据同步与构建列表</h3>
+
+        <h4><code>public void eItems_OnItemsSynced()</code></h4>
+        <p>当 <code>eItems</code> 扩展成功同步了所有 CS:GO 物品数据后，这个函数会被调用。它获取物品的总数，然后触发构建皮肤列表的工作。</p>
+        <pre><code class="language-sourcepawn">public void eItems_OnItemsSynced()
+{
+	g_iWeaponCount = eItems_GetWeaponCount();
+	g_iSkinCount = eItems_GetPaintsCount();
+	g_iGloveCount = eItems_GetGlovesCount();
+	g_iAgentCount = eItems_GetAgentsCount();
+	
+	BuildSkinsArrayList(); // 调用函数构建所有皮肤的动态列表
+}</code></pre>
+        <p>这是确保插件能正确识别和使用所有游戏内物品（皮肤、手套、特工等）数量的关键一步。</p>
+
+        <h4><code>public void BuildSkinsArrayList()</code>：整理皮肤数据</h4>
+        <p>这个函数会遍历所有武器、手套和特工模型，并将它们的有效皮肤/模型定义索引（DefIndex）组织到动态数组 (<code>ArrayList</code>) 中，方便后续随机选择。</p>
+        <pre><code class="language-sourcepawn">public void BuildSkinsArrayList()
+{
+	// 遍历所有武器，构建其可用皮肤列表
+	for (int iWeapon = 0; iWeapon &lt; g_iWeaponCount; iWeapon++)
+	{
+		// ... 初始化 ArrayList
+		// 遍历所有皮肤
+		for (int iSkin = 0; iSkin &lt; g_iSkinCount; iSkin++)
+		{
+			// 检查皮肤是否适用于当前武器 && 排除特定武器（如C4，战术手雷）
+			if (eItems_IsNativeSkin(iSkin, iWeapon, ITEMTYPE_WEAPON) && iWeaponDefIndex != 42 && iWeaponDefIndex != 59)
+			{
+				int iSkinDefIndex = eItems_GetSkinDefIndexBySkinNum(iSkin);
+				if (iSkinDefIndex > 0 && iSkinDefIndex &lt; 10000)
+					g_ArrayWeapons[iWeapon].Push(iSkinDefIndex); // 添加到列表中
+			}
+		}
+		g_ArrayWeapons[iWeapon].Push(0); // 额外添加一个0，表示无皮肤
+	}
+	
+	// 遍历所有手套类型，构建其可用皮肤列表
+	for (int iGlove = 0; iGlove &lt; g_iGloveCount; iGlove++)
+	{
+		// ... 初始化 ArrayList
+		// 遍历所有皮肤，检查是否适用于手套
+		for (int iGloveSkin = 0; iGloveSkin &lt; g_iSkinCount; iGloveSkin++)
+		{
+			if (eItems_IsSkinNumGloveApplicable(iGloveSkin) && eItems_IsNativeSkin(iGloveSkin, iGlove, ITEMTYPE_GLOVES))
+			{
+				int iGloveSkinDefIndex = eItems_GetSkinDefIndexBySkinNum(iGloveSkin);
+				g_ArrayGloves[iGlove].Push(iGloveSkinDefIndex); // 添加到列表中
+			}
+		}
+	}
+	
+	// 构建T方和CT方特工模型列表
+	// ... 初始化 ArrayList
+	for (int iAgent = 0; iAgent &lt; g_iAgentCount; iAgent++)
+	{
+		if(eItems_GetAgentTeamByAgentNum(iAgent) == CS_TEAM_T)
+			g_ArrayTAgents.Push(eItems_GetAgentDefIndexByAgentNum(iAgent));
+		else if(eItems_GetAgentTeamByAgentNum(iAgent) == CS_TEAM_CT)
+			g_ArrayCTAgents.Push(eItems_GetAgentDefIndexByAgentNum(iAgent));
+	}
+}</code></pre>
+        <p>这个函数是为随机分配物品做准备，它把所有可能的武器皮肤、手套皮肤和特工模型都整理好，分类存储起来。<code>DefIndex</code> 全称是 Definition Index，可以理解为游戏内部对某个物品（比如 AK-47、龙狙皮肤）的唯一数字编号。</p>
+
+        <h3>2.6 比赛结束数据修改：让 Bot 的数据也“好看”</h3>
+
+        <h4><code>Action OnEndOfMatchAllPlayersData(...)</code></h4>
+        <p>当一局游戏结束，服务器会向每个客户端发送一个消息，告诉他们所有玩家的统计数据，包括他们的库存信息，用于显示在比赛结束界面。这个函数就拦截了这个消息，并修改 BOT 的库存数据，让他们的装备在结算界面上也能显示出来。</p>
+        <pre><code class="language-sourcepawn">Action OnEndOfMatchAllPlayersData(UserMsg iMsgId, Protobuf hMessage, const int[] iPlayers, int iPlayersNum, bool bReliable, bool bInit)
+{
+	if (bReliable) // 确保消息可靠
+	{
+		// 遍历所有玩家数据
+		for (int i = 0; i &lt; hMessage.GetRepeatedFieldCount("allplayerdata"); i++)
+		{
+			Protobuf allplayerdata = hMessage.ReadRepeatedMessage("allplayerdata", i);
+			client = allplayerdata.ReadInt("entindex"); // 获取客户端ID
+			
+			if (IsValidClient(client)) // 确保是有效的BOT客户端
+			{
+				// 为BOT设置伪造的SteamID（XUID）
+				int iXuid[2];
+				iXuid[1] = 17825793; // 高位固定
+				iXuid[0] = GetBotAccountID(client); // 从bot_steamids获取低位
+				allplayerdata.SetBool("isbot", false); // 伪装成非BOT
+				allplayerdata.SetInt64("xuid", iXuid); // 设置伪造的XUID
+				
+				// 遍历玩家的所有物品
+				for (int j = 0; j &lt; allplayerdata.GetRepeatedFieldCount("items"); j++)
+				{
+					Protobuf items = allplayerdata.ReadRepeatedMessage("items", j);
+					iDefIndex = items.ReadInt("defindex"); // 获取物品的DefIndex
+					
+					// 如果是手套 (DefIndex 5028或5029)
+					if (iDefIndex == 5028 || iDefIndex == 5029)
+					{
+						items.SetInt("defindex", g_iStoredGlove[client]); // 设置成BOT实际佩戴的手套
+						items.SetInt("paintindex", g_iGloveSkin[client]);
+						items.SetInt("paintwear", FloatToInt("%d", g_fGloveWear[client]));
+						items.SetInt("paintseed", g_iGloveSeed[client]);
+						
+						// 设置手套的物品ID
+						int itemID[2];
+						itemID[0] = g_iGloveItemIDHigh[client];
+						itemID[1] = g_iGloveItemIDLow[client];
+						items.SetInt64("itemid", itemID);
+					}
+					// 如果是武器 (DefIndex &lt; 4613)
+					else if (iDefIndex &lt; 4613)
+					{
+						// 如果玩家活着并且不是C4或手雷，则设置武器皮肤属性
+						if (IsPlayerAlive(client) && !(iDefIndex == 41 || iDefIndex == 42 || iDefIndex == 59))
+						{
+							items.SetInt("paintindex", g_iSkinDefIndex[client][iDefIndex]);
+							items.SetInt("paintwear", FloatToInt("%d", g_fWeaponSkinWear[client][iDefIndex]));
+							items.SetInt("paintseed", g_iWeaponSkinSeed[client][iDefIndex]);
+						}
+						else // 否则认为是刀，设置刀的皮肤属性
+						{
+							items.SetInt("defindex", g_iStoredKnife[client]);
+							items.SetInt("paintindex", g_iSkinDefIndex[client][g_iStoredKnife[client]]);
+							items.SetInt("paintwear", FloatToInt("%d", g_fWeaponSkinWear[client][g_iStoredKnife[client]]));
+							items.SetInt("paintseed", g_iWeaponSkinSeed[client][g_iStoredKnife[client]]);
+						}
+						
+						// 设置武器的物品ID
+						int itemID[2];
+						itemID[0] = g_iItemIDLow[client][iDefIndex];
+						itemID[1] = g_iItemIDHigh[client][iDefIndex];
+						items.SetInt64("itemid", itemID);
+						
+						// 添加贴纸属性 (逻辑复杂，省略具体Switch-Case)
+						Protobuf stickers = items.AddMessage("stickers"); // 添加贴纸消息字段
+						// 根据 g_bUseSticker 和 g_bUseStickerCombo 决定添加哪些贴纸
+						// SetInt("slot", ...) 设置贴纸位置
+						// SetInt("sticker_id", ...) 设置贴纸ID
+					}
+					else // 其他物品，如特工模型，添加随机物品ID和臂章属性
+					{
+						// 随机生成物品ID
+						int itemID[2];
+						itemID[0] = Math_GetRandomInt(1, 2048);
+						itemID[1] = Math_GetRandomInt(1, 16384);
+						items.SetInt64("itemid", itemID);
+						
+						// 添加臂章属性 (逻辑复杂，省略具体Switch-Case)
+						Protobuf patch = items.AddMessage("stickers"); // 臂章同样使用"stickers"字段
+						// 根据 g_bUsePatch 和 g_bUsePatchCombo 决定添加哪些臂章
+						// SetInt("slot", ...)
+						// SetInt("sticker_id", ...)
+					}
+				}
+			}
+		}
+	}
+	return Plugin_Changed; // 告诉游戏消息已被修改
+}</code></pre>
+        <ul>
+            <li><strong>Protobuf</strong>：这是一种高效的数据序列化格式，游戏内部用来传输复杂数据。插件通过操作 <code>Protobuf</code> 消息来修改比赛结束数据。</li>
+            <li><strong>伪造XUID</strong>：为了让 BOT 的物品看起来像真实玩家的物品，插件会给 BOT 分配一个伪造的 Steam ID (XUID)，并在消息中标记他们为“不是 BOT”。</li>
+            <li><strong>修改物品属性</strong>：对于手套、武器（包括刀和除 C4/手雷外的其他武器），插件会根据之前为该 BOT 随机生成的全局变量数据，去覆盖掉消息中的默认物品属性（如 DefIndex、磨损、种子、物品 ID）。</li>
+            <li><strong>贴纸和臂章</strong>：贴纸和臂章也在这里被添加或修改，它们的属性（比如位置、ID）会根据插件的随机选择写入消息中。</li>
+        </ul>
+
+        <h3>2.7 地图加载事件</h3>
+
+        <h4><code>public void OnMapStart()</code>：地图加载时</h4>
+        <p>每次新地图加载时，这个函数都会被调用。它的主要作用是清理并重新准备地图上掉落武器的列表。</p>
+        <pre><code class="language-sourcepawn">public void OnMapStart()
+{
+	if(g_ArrayMapWeapons != null)
+	{
+		delete g_ArrayMapWeapons; // 删除旧的列表
+		g_ArrayMapWeapons = null;
+	}
+	g_ArrayMapWeapons = new ArrayList(); // 创建新的列表
+}</code></pre>
+        <p>这个操作是为了确保每次新地图开始时，用于追踪地图上掉落武器的列表都是空的，避免旧地图的数据干扰。</p>
+
+        <h3>2.8 客户端加载完成事件</h3>
+
+        <h4><code>public void OnClientPostAdminCheck(int client)</code>：玩家（BOT）准备好上线了！</h4>
+        <p>当一个客户端（BOT 或真实玩家）完全连接到服务器并准备好进入游戏时，这个函数就会被调用。这是插件为 BOT 分配所有个性化物品的核心区域。</p>
+        <pre><code class="language-sourcepawn">public void OnClientPostAdminCheck(int client)
+{
+	if (IsValidClient(client)) // 确保是有效的BOT
+	{
+		if (eItems_AreItemsSynced()) // 确保物品数据已同步
+		{
+			static int IDLow = 2048; // 用于生成物品ID
+			static int IDHigh = 16384; // 用于生成物品ID
+		
+			// 随机分配音乐盒、勋章/硬币和是否使用自定义特工
+			g_iMusicKit[client] = eItems_GetMusicKitDefIndexByMusicKitNum(Math_GetRandomInt(0, eItems_GetMusicKitsCount() - 1));
+			g_iCoin[client] = Math_GetRandomInt(1, 2) == 1 ? eItems_GetCoinDefIndexByCoinNum(Math_GetRandomInt(0, eItems_GetCoinsCount() - 1)) : eItems_GetPinDefIndexByPinNum(Math_GetRandomInt(0, eItems_GetPinsCount() - 1));
+			g_bUseCustomPlayer[client] = IsItMyChance(65.0) ? true : false; // 65%几率使用自定义模型
+			
+			// 随机分配T方和CT方特工模型
+			int iRandomTAgent = Math_GetRandomInt(0, g_ArrayTAgents.Length - 1);
+			int iRandomCTAgent = Math_GetRandomInt(0, g_ArrayCTAgents.Length - 1);
+			if (iRandomTAgent != -1 && iRandomCTAgent != -1)
+			{
+				g_iAgent[client][CS_TEAM_T] = g_ArrayTAgents.Get(iRandomTAgent);
+				g_iAgent[client][CS_TEAM_CT] = g_ArrayCTAgents.Get(iRandomCTAgent);
+				
+				// 预加载特工模型和语音前缀
+				eItems_GetAgentPlayerModelByDefIndex(g_iAgent[client][CS_TEAM_CT], g_szModel[client][CS_TEAM_CT], 128);
+				PrecacheModel(g_szModel[client][CS_TEAM_CT]);
+				eItems_GetAgentVOPrefixByDefIndex(g_iAgent[client][CS_TEAM_CT], g_szVOPrefix[client][CS_TEAM_CT], 128);
+				// T方特工模型也类似处理
+			}
+			
+			// 随机分配臂章及其组合模式
+			g_bUsePatch[client] = IsItMyChance(40.0) ? true : false; // 40%几率使用臂章
+			g_bUsePatchCombo[client] = IsItMyChance(50.0) ? true : false; // 50%几率使用组合模式
+			g_iRndPatchCombo[client] = g_bUsePatchCombo[client] ? Math_GetRandomInt(1, 14) : Math_GetRandomInt(1, 2);
+			
+			// 随机生成臂章ID
+			g_iRndPatch[client][0] = eItems_GetPatchDefIndexByPatchNum(Math_GetRandomInt(0, eItems_GetPatchesCount() - 1));
+			// ... 另外3个位置的臂章ID
+			g_iRndSamePatch[client] = eItems_GetPatchDefIndexByPatchNum(Math_GetRandomInt(0, eItems_GetPatchesCount() - 1));
+			
+			// ----------------- 手套处理 -----------------
+			g_iStoredGlove[client] = eItems_GetGlovesDefIndexByGlovesNum(Math_GetRandomInt(0, g_iGloveCount - 1)); // 随机手套种类
+			g_iGloveItemIDLow[client] = IDLow++; // 分配唯一的物品ID
+			g_iGloveItemIDHigh[client] = IDHigh++;
+			
+			int iGloveNum = eItems_GetGlovesNumByDefIndex(g_iStoredGlove[client]);
+			int iRandomGloveSkin = Math_GetRandomInt(0, g_ArrayGloves[iGloveNum].Length - 1);
+			if (iRandomGloveSkin != -1)
+				g_iGloveSkin[client] = g_ArrayGloves[iGloveNum].Get(iRandomGloveSkin); // 随机手套皮肤
+			
+			g_fGloveWear[client] = Math_GetRandomFloat(0.06, 0.80); // 随机磨损度 (0.06 - 0.80)
+			g_iGloveSeed[client] = Math_GetRandomInt(1, 1000);     // 随机图案种子
+			
+			// ----------------- 武器处理 -----------------
+			g_iStoredKnife[client] = g_iKnifeDefIndex[Math_GetRandomInt(0, sizeof(g_iKnifeDefIndex) - 1)]; // 随机刀具
+			
+			for (int iWeapon = 0; iWeapon &lt; g_iWeaponCount; iWeapon++)
+			{
+				int iWeaponDefIndex = eItems_GetWeaponDefIndexByWeaponNum(iWeapon);
+				int iRandomWeaponSkin = Math_GetRandomInt(0, g_ArrayWeapons[iWeapon].Length - 1);
+				if (iRandomWeaponSkin != -1)
+					g_iSkinDefIndex[client][iWeaponDefIndex] = g_ArrayWeapons[iWeapon].Get(iRandomWeaponSkin); // 随机武器皮肤
+				
+				g_iItemIDHigh[client][iWeaponDefIndex] = IDHigh++; // 分配唯一的物品ID
+				g_iItemIDLow[client][iWeaponDefIndex] = IDLow++;
+				
+				g_iWeaponSkinSeed[client][iWeaponDefIndex] = Math_GetRandomInt(1, 1000); // 随机图案种子
+				g_bUseSticker[client][iWeaponDefIndex] = IsItMyChance(40.0) ? true : false; // 40%几率使用贴纸
+				g_bUseStickerCombo[client][iWeaponDefIndex] = IsItMyChance(50.0) ? true : false; // 50%几率使用贴纸组合
+				
+				g_bUseStatTrak[client][iWeaponDefIndex] = false; // 默认无StatTrak
+				g_bUseSouvenir[client][iWeaponDefIndex] = false; // 默认非纪念品
+				
+				// 根据箱子信息判断是否可以有StatTrak或纪念品 (如果皮肤是出自某个箱子)
+				// ... 复杂的逻辑，遍历箱子，判断皮肤来源，然后随机几率赋予StatTrak/纪念品
+				
+				g_iRndStickerCombo[client][iWeaponDefIndex] = g_bUseStickerCombo[client][iWeaponDefIndex] ? Math_GetRandomInt(1, 14) : Math_GetRandomInt(1, 2);
+				
+				// 随机生成贴纸ID
+				g_iRndSticker[client][iWeaponDefIndex][0] = eItems_GetStickerDefIndexByStickerNum(Math_GetRandomInt(0, eItems_GetStickersCount() - 1));
+				// ... 另外3个位置的贴纸ID
+				g_iRndSameSticker[client][iWeaponDefIndex] = eItems_GetStickerDefIndexByStickerNum(Math_GetRandomInt(0, eItems_GetStickersCount() - 1));
+				
+				// 随机磨损度，优先使用皮肤本身的磨损范围
+				float fMinFloat = eItems_GetSkinWearRemapByDefIndex(g_iSkinDefIndex[client][iWeaponDefIndex], Min);
+				float fMaxFloat = eItems_GetSkinWearRemapByDefIndex(g_iSkinDefIndex[client][iWeaponDefIndex], Max);
+				g_fWeaponSkinWear[client][iWeaponDefIndex] = fMinFloat == 0.0 && fMaxFloat == 0.0 ? Math_GetRandomFloat(0.00, 1.00) : Math_GetRandomFloat(fMinFloat, fMaxFloat);
+			}
+		}
+		
+		// 钩子SDK事件：每次受伤和武器装备时
+		SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamageAlive);
+		SDKHook(client, SDKHook_WeaponEquip, SDK_OnWeaponEquip);
+	}
+}</code></pre>
+        <ul>
+            <li><strong>全局变量填充</strong>：这个函数会为每个玩家（特别是 BOT）填充之前声明的各种全局变量，这些变量存储了他们的音乐盒、硬币、特工模型、臂章、手套和所有武器的皮肤、磨损、贴纸、StatTrak 等信息，并且大量使用了 <code>Math_GetRandomInt</code> 和 <code>IsItMyChance</code> 来随机决定这些属性。</li>
+            <li><strong>物品 ID 生成</strong>：<code>IDLow</code> 和 <code>IDHigh</code> 用于生成唯一的 64 位物品 ID，这是 CS:GO 区分每个物品的关键。</li>
+            <li><strong>模型预加载</strong>：为了特工模型能正常显示，插件会调用 <code>PrecacheModel</code> 提前加载模型文件。</li>
+            <li><strong>磨损度随机化</strong>：皮肤的磨损度（<code>g_fWeaponSkinWear</code>）是随机生成的，并且会考虑到皮肤本身的磨损范围（有些皮肤只有略有磨损级别）。</li>
+            <li><strong>事件钩子</strong>：在这里再次钩子了玩家的受伤事件（<code>OnTakeDamageAlive</code>）和武器装备事件（<code>SDK_OnWeaponEquip</code>），以便在游戏过程中实时更新 StatTrak 或处理地图武器。</li>
+        </ul>
+
+        <h3>2.9 物品给予事件钩子</h3>
+
+        <h4><code>Action GiveNamedItemPre(...)</code>：给予物品前</h4>
+        <p>当游戏准备通过名称（如“weapon_ak47”）给予玩家一个物品时，这个函数会在物品真正给予之前被调用。插件利用它来“狸猫换太子”，把默认的刀换成我们为 BOT 随机指定的刀。</p>
+        <pre><code class="language-sourcepawn">Action GiveNamedItemPre(int client, char szClassname[64], CEconItemView &amp;pItem, bool &amp;bIgnoredCEconItemView, bool &amp;bOriginIsNULL, float fOrigin[3])
+{
+	if (!IsValidClient(client))
+		return Plugin_Continue; // 非BOT玩家或无效客户端，跳过
+
+	int clientTeam = GetClientTeam(client);
+	if (clientTeam &lt; CS_TEAM_T)
+		return Plugin_Handled; // 如果是观众或无效团队，阻止给予
+
+	int iDefIndex = eItems_GetWeaponDefIndexByClassName(szClassname);
+	if (iDefIndex &lt;= -1)
+		return Plugin_Continue; // 不是有效的武器，跳过
+
+	if (!eItems_IsDefIndexKnife(iDefIndex))
+		return Plugin_Continue; // 如果不是刀，跳过
+
+	if (!eItems_IsDefIndexKnife(g_iStoredKnife[client]))
+		return Plugin_Continue; // 如果BOT没有预设刀，跳过
+
+	// 把要给予的物品的类名替换成BOT预设刀的类名
+	eItems_GetWeaponClassNameByDefIndex(g_iStoredKnife[client], szClassname, sizeof(szClassname));
+	bIgnoredCEconItemView = true; // 告诉PTaH忽略原始的物品视图CEconItemView
+
+	return Plugin_Changed; // 告诉PTaH，我们修改了它
+}</code></pre>
+        <p>这个函数主要针对刀具。当游戏系统要给 BOT 配备默认刀时，插件会拦截这个操作，把默认刀的名字替换成之前为该 BOT 随机生成的自定义刀具的名字，从而实现 BOT 佩戴自定义刀具的效果。</p>
+
+        <h4><code>void GiveNamedItemPost(...)</code>：给予物品后</h4>
+        <p>当一个物品被给予玩家实体后，这个函数会被调用。它会设置武器的各项自定义属性。</p>
+        <pre><code class="language-sourcepawn">void GiveNamedItemPost(int client, const char[] szClassname, const CEconItemView pItem, int iEntity, bool bOriginIsNULL, const float fOrigin[3])
+{
+	int iDefIndex = eItems_GetWeaponDefIndexByClassName(szClassname);
+	if (iDefIndex &lt;= -1)
+		return;
+
+	if (IsValidClient(client) && eItems_IsValidWeapon(iEntity))
+	{
+		int iPrevOwner = GetEntProp(iEntity, Prop_Send, "m_hPrevOwner");
+		if (iPrevOwner == -1) // 确保是新生成的物品，而不是从地上捡起来的
+		{
+			if (eItems_IsDefIndexKnife(iDefIndex))
+			{
+				EquipPlayerWeapon(client, iEntity); // 强制装备刀具
+				SetEntProp(iEntity, Prop_Send, "m_iEntityQuality", 3); // 设置实体品质为特殊（紫色）
+			}
+			SetWeaponProps(client, iEntity); // 调用辅助函数设置武器的各种属性
+		}
+	}
+}</code></pre>
+        <ul>
+            <li><strong><code>iEntity</code></strong>：这是刚被给予玩家的物品在游戏中的唯一实体ID。</li>
+            <li><strong><code>m_hPrevOwner</code></strong>: 检查这个属性确保物品是游戏刚生成的，而不是玩家捡起的。</li>
+            <li><strong><code>SetWeaponProps(client, iEntity)</code></strong>：这是核心函数，它会为这个新生成的武器实体设置磨损、种子、皮肤、StatTrak、贴纸等所有属性。</li>
+        </ul>
+
+        <h3>2.10 伤害事件与 StatTrak 更新</h3>
+
+        <h4><code>Action OnTakeDamageAlive(...)</code>：受到伤害或造成击杀时</h4>
+        <p>当任何实体受到伤害时，这个函数都会被触发。插件检查这是否导致了击杀，并更新武器的 StatTrak 计数器。</p>
+        <pre><code class="language-sourcepawn">Action OnTakeDamageAlive(int victim, int &amp;attacker, int &amp;iInflictor, float &amp;fDamage, int &amp;iDamageType, int &amp;iWeapon, float fDamageForce[3], float fDamagePosition[3])
+{
+	// 如果目标不会死亡，则跳过
+	if (float(GetClientHealth(victim)) - fDamage > 0.0)
+		return Plugin_Continue;
+	
+	// 只处理刀杀或枪杀
+	if (!(iDamageType &amp; DMG_SLASH) && !(iDamageType &amp; DMG_BULLET))
+		return Plugin_Continue;
+	
+	if (!IsValidClient(attacker))
+		return Plugin_Continue; // 确保攻击者是有效的BOT
+	
+	if (!eItems_IsValidWeapon(iWeapon))
+		return Plugin_Continue; // 确保是有效的武器
+	
+	int iDefIndex = eItems_GetWeaponDefIndexByWeapon(iWeapon); // 获取武器的DefIndex
+	int iWeaponsReturn[42];
+	RankMe_GetWeaponStats(attacker, iWeaponsReturn); // 从RankMe插件获取攻击者使用该武器的击杀数
+	
+	// 根据武器DefIndex更新StatTrak击杀数 (此处逻辑省略，但会更新 g_iStatTrakKills 数组)
+	// 例如：case 500, ...: g_iStatTrakKills[attacker][iDefIndex] = iWeaponsReturn[0];
+
+	// 如果武器是BOT的，并且有StatTrak属性
+	if (GetEntProp(iWeapon, Prop_Send, "m_iAccountID") == GetBotAccountID(attacker) && (GetEntProp(iWeapon, Prop_Send, "m_iEntityQuality") == 9 || g_bKnifeHasStatTrak[attacker][iDefIndex]))
+	{
+		CEconItemView pItem = PTaH_GetEconItemViewFromEconEntity(iWeapon);
+		CAttributeList pDynamicAttributes = pItem.NetworkedDynamicAttributesForDemos;
+		
+		// 更新 StatTrak 属性值 (属性ID 80)
+		pDynamicAttributes.SetOrAddAttributeValue(80, g_iStatTrakKills[attacker][iDefIndex] + 1);
+		
+		SDKCall(g_hForceUpdate, attacker, -1); // 强制更新客户端，以便StatTrak数字立即显示
+	}
+	
+	return Plugin_Continue;
+}</code></pre>
+        <ul>
+            <li><strong>StatTrak 更新</strong>：这个函数监测 BOT 的击杀。如果 BOT 手持的武器带有 StatTrak 计数器（品质为 9），它会从 RankMe 插件获取该武器的击杀数，然后通过修改武器实体的属性（Attribute ID 80）来更新 StatTrak 数字。</li>
+            <li><strong>强制更新</strong>：<code>SDKCall(g_hForceUpdate, attacker, -1);</code> 这一行非常重要，它强制客户端立刻刷新道具数据，这样你在游戏中就能实时看到 BOT 武器上的 StatTrak 击杀数增加了。</li>
+        </ul>
+
+        <h3>2.11 武器拾取和装备事件</h3>
+
+        <h4><code>Action WeaponCanUsePre(...)</code>：武器能否被拾取前</h4>
+        <p>这个函数主要用于解决在“休闲模式”中，玩家不能随意拾取地上武器的问题。在这里，它确保 BOT 始终可以拾取地上的刀具。</p>
+        <pre><code class="language-sourcepawn">Action WeaponCanUsePre(int client, int iWeapon, bool &amp;bPickup)
+{
+	int iDefIndex = eItems_GetWeaponDefIndexByWeapon(iWeapon);
+	if (eItems_IsDefIndexKnife(iDefIndex))
+	{
+		bPickup = true; // 允许拾取
+		return Plugin_Changed; // 告诉游戏我们修改了行为
+	}
+	return Plugin_Continue;
+}</code></pre>
+        <p>通过这个钩子，BOT 可以自由拾取地上的刀，这对于那些地图上预设的刀具（如 CS_GO_Knife）来说尤其有用。</p>
+
+        <h4><code>public Action SDK_OnWeaponEquip(...)</code>：武器被装备时</h4>
+        <p>当一个玩家（这里主要是 BOT）装备一把武器时，这个函数会被调用。</p>
+        <pre><code class="language-sourcepawn">public Action SDK_OnWeaponEquip(int client, int iWeapon)
+{
+    // 检查是否是地图上刷新的武器且没有主人
+    if(IsMapWeapon(iWeapon, true)) // 如果是地图武器，且被BOT捡起，则从地图武器列表中移除
+    {
+        DataPack datapack = new DataPack(); // 数据包
+        datapack.WriteCell(client); // 写入客户端ID
+        datapack.WriteCell(iWeapon); // 写入武器实体ID
+
+        // 创建一个短暂的计时器来处理，避免在当前帧进行复杂操作
+        CreateTimer(0.1, Timer_MapWeaponEquipped, datapack);
+    }
+    return Plugin_Continue;
+}</code></pre>
+        <p>这个钩子关注的是地图上预刷新的武器。如果 BOT 捡起了这些武器，插件会启动一个短暂的计时器，来为这些武器设置自定义属性。</p>
+
+        <h4><code>public Action Timer_MapWeaponEquipped(...)</code>：处理地图武器装备的定时器</h4>
+        <p>作为 <code>SDK_OnWeaponEquip</code> 的后续，这个定时器函数会在短时间后执行，目的就是给 BOT 刚刚捡起来的地图武器也附加上自定义的物品 ID 和所有权信息。</p>
+        <pre><code class="language-sourcepawn">public Action Timer_MapWeaponEquipped(Handle timer, DataPack datapack)
+{
+	datapack.Reset();
+	int client = datapack.ReadCell();
+	int iWeapon = datapack.ReadCell();
+	delete datapack; // 删除数据包
+
+	// 确保客户端和武器都有效
+	if(!IsValidClient(client) || !eItems_IsValidWeapon(iWeapon))
+		return Plugin_Continue;
+
+	int iWeaponSlot = eItems_GetWeaponSlotByWeapon(iWeapon);
+	if (iWeaponSlot == CS_SLOT_C4) // C4不处理
+		return Plugin_Continue;
+
+	// 设置武器的物品ID（伪造）和原始所有者XUID
+	SetEntProp(iWeapon, Prop_Send, "m_OriginalOwnerXuidLow", GetBotAccountID(client));
+	SetEntProp(iWeapon, Prop_Send, "m_OriginalOwnerXuidHigh", 17825793);
+	
+	SDKCall(g_hForceUpdate, client, -1); // 强制更新客户端
+	
+	return Plugin_Stop;
+}</code></pre>
+        <p>通过设置 <code>m_OriginalOwnerXuidLow</code> 和 <code>m_OriginalOwnerXuidHigh</code>，插件让 BOT 捡起的地图武器也看起来像是他们自己的库存物品，从而能在死亡信息或结算界面中显示正确的武器信息。</p>
+
+        <h3>2.12 回合开始扫描地图武器</h3>
+
+        <h4><code>public Action Event_OnRoundStart(...)</code>：回合开始时</h4>
+        <p>每当一个新回合开始时，这个函数就会被调用。它的任务是扫描地图上所有没有所有者的武器（即那些刷新在地图上或玩家丢弃的），并将它们添加到 <code>g_ArrayMapWeapons</code> 列表中，以便后续追踪。</p>
+        <pre><code class="language-sourcepawn">public Action Event_OnRoundStart(Event eEvent, const char[] szName, bool bDontBroadcast)
+{
+	char szWeaponClassname[64];
+	for(int i = MaxClients; i &lt; GetMaxEntities(); i++) // 遍历所有实体（从玩家ID之后开始）
+	{
+		if(!IsValidEntity(i))
+			continue;
+
+		GetEntityClassname(i, szWeaponClassname, sizeof(szWeaponClassname));
+		if((StrContains(szWeaponClassname, "weapon_")) == -1)
+			continue; // 确保是武器实体
+
+		if(GetEntProp(i, Prop_Send, "m_hOwnerEntity") != -1)
+			continue; // 确保武器没有主人（不是玩家手持的）
+		
+		int iDefIndex;
+		if((iDefIndex = eItems_GetWeaponDefIndexByClassName(szWeaponClassname)) == -1)
+			continue; // 无效武器
+
+		if(eItems_IsDefIndexKnife(iDefIndex))
+			continue; // 跳过刀（刀有单独处理逻辑）
+
+		g_ArrayMapWeapons.Push(i); // 将武器实体ID添加到地图武器列表中
+	}
+
+	return Plugin_Continue;
+}</code></pre>
+        <p>这个函数为 <code>SDK_OnWeaponEquip</code> 和 <code>Timer_MapWeaponEquipped</code> 提供了基础数据，让插件知道哪些武器是来自地图上的默认生成，从而可以对其进行特殊处理。</p>
+
+        <h3>2.13 玩家出生和死亡事件</h3>
+
+        <h4><code>public void Event_PlayerSpawn(...)</code>：玩家（BOT）出生时</h4>
+        <p>当玩家或 BOT 出生（复活）时，这个函数会被触发。它负责为 BOT 立刻配备上手套、音乐盒和勋章。</p>
+        <pre><code class="language-sourcepawn">public void Event_PlayerSpawn(Event eEvent, const char[] szName, bool bDontBroadcast)
+{
+	int client = GetClientOfUserId(eEvent.GetInt("userid")); // 获取出生玩家的客户端ID
+	if (IsValidClient(client))
+	{
+		GivePlayerGloves(client); // 给予手套（详细函数在下面）
+		
+		if (eItems_AreItemsSynced())
+		{
+			// 设置音乐盒ID
+			SetEntProp(client, Prop_Send, "m_unMusicID", g_iMusicKit[client]);
+			
+			// 设置勋章/硬币（可能根据随机决定是哪种硬币）
+			if (Math_GetRandomInt(1, 2) == 1)
+				SDKCall(g_hSetRank, client, MEDAL_CATEGORY_SEASON_COIN, g_iCoin[client]);
+			else
+				SDKCall(g_hSetRank, client, MEDAL_CATEGORY_SEASON_COIN, g_iCoin[client]);
+		}
+	}
+}</code></pre>
+        <ul>
+            <li><strong>手套、音乐盒、勋章</strong>：这里是 BOT 获得手套、音乐盒和勋章/硬币的入口。手套的实际生成由 <code>GivePlayerGloves</code> 函数处理。音乐盒和勋章则直接通过设置玩家实体的属性或调用 SDK 函数来应用。</li>
+        </ul>
+
+        <h4><code>public Action Event_PlayerDeath(...)</code>：玩家（BOT）死亡时</h4>
+        <p>当一个玩家（BOT）死亡时，这个函数会捕捉死亡事件，并修改死亡信息，确保死亡通知中显示的武器 ID 能够对应上 BOT 实际佩戴的自定义皮肤。</p>
+        <pre><code class="language-sourcepawn">public Action Event_PlayerDeath(Event eEvent, const char[] szName, bool bDontBroadcast)
+{
+	int client = GetClientOfUserId(eEvent.GetInt("attacker")); // 获取攻击者的客户端ID
+	if (IsValidClient(client)) // 确保是有效的BOT攻击者
+	{
+		char szWeaponName[128];
+		eEvent.GetString("weapon", szWeaponName, sizeof(szWeaponName)); // 获取击杀武器的名称
+		
+		int iActiveWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"); // 获取攻击者当前手持的武器实体
+		
+		if(IsValidEntity(iActiveWeapon))
+		{
+			int iDefIndex = eItems_GetWeaponDefIndexByWeapon(iActiveWeapon); // 获取武器DefIndex
+			
+			char szItemID[128];
+			int iItemID[2];
+			
+			iItemID[0] = g_iItemIDLow[client][iDefIndex]; // 从全局变量获取BOT该武器的自定义物品ID
+			iItemID[1] = g_iItemIDHigh[client][iDefIndex];
+			
+			Int64ToString(iItemID, szItemID, sizeof(szItemID)); // 将64位ID转为字符串
+			
+			eEvent.SetString("weapon_itemid", szItemID); // 覆盖死亡事件中的武器物品ID
+		}
+	}
+	return Plugin_Continue;
+}</code></pre>
+        <p>这个函数确保当 BOT 造成击杀时，显示的击杀信息中，武器的物品 ID 是我们伪造的那个，而不是默认的 ID，这样才能正确地在死亡提示中显示出自定义皮肤。</p>
+
+        <h3>2.14 模型更改钩子</h3>
+
+        <h4><code>public Action MdlCh_PlayerSpawn(...)</code>：玩家模型生成时</h4>
+        <p>这个函数是 <code>modelch</code> 扩展提供的钩子。当玩家模型即将被设置时，它允许插件介入并修改模型路径和语音前缀，从而实现自定义特工模型。</p>
+        <pre><code class="language-sourcepawn">public Action MdlCh_PlayerSpawn(int client, bool bCustom, char[] szModel, int iModelLength, char[] szVoPrefix, int iPrefixLength)
+{	
+	if (!IsValidClient(client) || !g_bUseCustomPlayer[client])
+		return Plugin_Continue; // 如果不是有效的BOT或BOT不使用自定义模型，则跳过
+	
+	// 根据BOT所属队伍（CT或T）设置模型和语音前缀
+	if (GetClientTeam(client) == CS_TEAM_CT)
+	{
+		strcopy(szModel, iModelLength, g_szModel[client][CS_TEAM_CT]); // 使用预加载的CT特工模型
+		strcopy(szVoPrefix, iPrefixLength, g_szVOPrefix[client][CS_TEAM_CT]); // 使用预加载的CT特工语音前缀
+			
+		if (g_bUsePatch[client]) // 如果BOT有臂章
+		{
+			// 根据随机的臂章组合模式设置臂章属性
+			// SetEntProp(client, Prop_Send, "m_vecPlayerPatchEconIndices", g_iRndPatch[client][0], 4, 0); // 设置臂章槽位和ID
+			// ... 复杂的Switch-Case逻辑，用于设置不同臂章组合
+		}
+	}
+	else if(GetClientTeam(client) == CS_TEAM_T)
+	{
+		// T方特工模型的处理类似CT方
+	}
+
+	return Plugin_Changed; // 告诉modelch插件我们修改了模型
+}</code></pre>
+        <ul>
+            <li><strong>自定义特工模型</strong>：如果 BOT 被随机分配了自定义特工模型，这个函数会用之前预加载的模型路径覆盖掉默认的模型路径。</li>
+            <li><strong>臂章显示</strong>：臂章的显示也通过这里修改玩家实体的 <code>m_vecPlayerPatchEconIndices</code> 属性来实现。它会根据随机确定的臂章种类和组合模式，将臂章的 DefIndex 写入到玩家的四个臂章槽位中。</li>
+        </ul>
+
+        <h3>2.15 武器属性设置核心函数</h3>
+
+        <h4><code>void SetWeaponProps(int client, int iEntity)</code>：设置武器的“灵魂”！</h4>
+        <p>这个函数是插件的核心之一，它负责将之前为 BOT 随机生成的所有武器属性（皮肤、磨损、贴纸、StatTrak 等）应用到游戏中的武器实体上。这使得武器在游戏中看起来、用起来都像真正的自定义皮肤。</p>
+        <pre><code class="language-sourcepawn">void SetWeaponProps(int client, int iEntity)
+{
+	int iDefIndex = eItems_GetWeaponDefIndexByWeapon(iEntity);
+	if (iDefIndex > -1)
+	{
+		// 设置武器的物品ID和所有者信息
+		SetEntProp(iEntity, Prop_Send, "m_iItemIDLow", g_iItemIDLow[client][iDefIndex]);
+		SetEntProp(iEntity, Prop_Send, "m_iItemIDHigh", g_iItemIDHigh[client][iDefIndex]);
+		SetEntProp(iEntity, Prop_Send, "m_OriginalOwnerXuidLow", GetBotAccountID(client));
+		SetEntProp(iEntity, Prop_Send, "m_OriginalOwnerXuidHigh", 17825793);
+		
+		// 获取武器实体的经济物品视图（CEconItemView）和动态属性列表（CAttributeList）
+		CEconItemView pItem = PTaH_GetEconItemViewFromEconEntity(iEntity);
+		CAttributeList pDynamicAttributes = pItem.NetworkedDynamicAttributesForDemos;
+		
+		// 设置皮肤ID、图案种子、磨损度对应的属性值
+		pDynamicAttributes.SetOrAddAttributeValue(6, float(g_iSkinDefIndex[client][iDefIndex])); // 皮肤ID (Attribute 6)
+		pDynamicAttributes.SetOrAddAttributeValue(7, float(g_iWeaponSkinSeed[client][iDefIndex])); // 图案种子 (Attribute 7)
+		pDynamicAttributes.SetOrAddAttributeValue(8, g_fWeaponSkinWear[client][iDefIndex]); // 磨损度 (Attribute 8)
+		
+		int iWeaponsReturn[42];
+		RankMe_GetWeaponStats(client, iWeaponsReturn); // 获取RankMe统计的击杀数
+		// ... 根据武器DefIndex更新StatTrak击杀数到 g_iStatTrakKills
+		
+		//  StatTrak 和纪念品处理
+		if (eItems_IsDefIndexKnife(iDefIndex)) // 如果是刀
+		{
+			if (g_bUseStatTrak[client][iDefIndex])
+			{
+				pDynamicAttributes.SetOrAddAttributeValue(80, g_iStatTrakKills[client][iDefIndex]); // StatTrak 计数 (Attribute 80)
+				pDynamicAttributes.SetOrAddAttributeValue(81, 0); // StatTrak 类型 (Attribute 81, 0表示StatTrak)
+				g_bKnifeHasStatTrak[client][iDefIndex] = true;
+			}
+		}
+		else // 如果是普通武器
+		{
+			if (g_bUseStatTrak[client][iDefIndex])
+			{
+				pDynamicAttributes.SetOrAddAttributeValue(80, g_iStatTrakKills[client][iDefIndex]);
+				pDynamicAttributes.SetOrAddAttributeValue(81, 0);
+				SetEntProp(iEntity, Prop_Send, "m_iEntityQuality", 9); // 设置品质为 StatTrak (9)
+			}
+			if (g_bUseSouvenir[client][iDefIndex])
+			{
+				pDynamicAttributes.RemoveAttributeByDefIndex(80); // 移除StatTrak属性
+				pDynamicAttributes.RemoveAttributeByDefIndex(81);
+				SetEntProp(iEntity, Prop_Send, "m_iEntityQuality", 12); // 设置品质为 纪念品 (12)
+			}
+		}
+		
+		// 贴纸处理 (逻辑复杂，省略具体Switch-Case)
+		if (g_bUseSticker[client][iDefIndex])
+		{
+			// 根据贴纸组合模式设置贴纸属性
+			// pDynamicAttributes.SetOrAddAttributeValue(113, ...); // 贴纸槽位0
+			// pDynamicAttributes.SetOrAddAttributeValue(117, ...); // 贴纸槽位1
+			// pDynamicAttributes.SetOrAddAttributeValue(121, ...); // 贴纸槽位2
+			// pDynamicAttributes.SetOrAddAttributeValue(125, ...); // 贴纸槽位3
+		}
+		
+		// 设置武器持有者
+		SetEntProp(iEntity, Prop_Send, "m_iAccountID", GetBotAccountID(client));
+		SetEntPropEnt(iEntity, Prop_Send, "m_hOwnerEntity", client);
+		SetEntPropEnt(iEntity, Prop_Send, "m_hPrevOwner", -1);
+		
+		SDKCall(g_hForceUpdate, client, -1); // 强制更新客户端数据
+	}
+}</code></pre>
+        <ul>
+            <li><strong>CEconItemView 与 CAttributeList</strong>：这是 SourceMod/游戏内部处理经济物品（比如皮肤、印花、StatTrak）的机制。<code>CEconItemView</code> 代表一个物品的所有数据，而 <code>CAttributeList</code> 则是存储这些物品具体属性（如皮肤 ID、磨损值）的列表。插件通过这些 API 来修改武器的“内部数据”。</li>
+            <li><strong>属性 ID（Attribute ID）</strong>：每个物品属性都有一个唯一的数字 ID。例如：
+                <ul>
+                    <li><code>6</code>: 皮肤（PaintKit）ID</li>
+                    <li><code>7</code>: 图案种子（PaintSeed）</li>
+                    <li><code>8</code>: 磨损度（Wear）</li>
+                    <li><code>80</code>: StatTrak 击杀计数</li>
+                    <li><code>81</code>: StatTrak 类型（0 表示 StatTrak）</li>
+                    <li><code>113, 117, 121, 125</code>: 四个贴纸槽位</li>
+                </ul>
+            </li>
+            <li><strong><code>m_iEntityQuality</code> (实体品质)</strong>：这个属性决定了游戏物品的“稀有度”或“特殊类型”。设置为 <code>9</code> 表示 StatTrak 物品，<code>12</code> 表示纪念品 (Souvenir) 物品。</li>
+            <li><strong>所有者信息</strong>：设置 <code>m_iAccountID</code> 和 <code>m_hOwnerEntity</code> 等属性，让武器知道它属于哪个 BOT。</li>
+            <li><strong>强制更新</strong>：再次调用 <code>SDKCall(g_hForceUpdate, client, -1);</code> 确保客户端能立刻看到这些属性的更新。</li>
+        </ul>
+
+        <h3>2.16 给予玩家手套</h3>
+
+        <h4><code>public void GivePlayerGloves(int client)</code>：给予手套！</h4>
+        <p>这个函数专门负责处理给 BOT 赋予自定义手套。它创建了一个新的“可穿戴物品”实体，并设置其属性。</p>
+        <pre><code class="language-sourcepawn">public void GivePlayerGloves(int client)
+{
+	int iEntity = GetEntPropEnt(client, Prop_Send, "m_hMyWearables"); // 获取玩家当前佩戴的可穿戴物品
+	if (iEntity != -1)
+		AcceptEntityInput(iEntity, "KillHierarchy"); // 如果有，先移除旧的穿戴物
+		
+	iEntity = CreateEntityByName("wearable_item"); // 创建一个新的可穿戴物品实体
+	if (iEntity != -1 && eItems_AreItemsSynced())
+	{
+		CEconItemView pItem = PTaH_GetEconItemViewFromEconEntity(iEntity);
+		CAttributeList pDynamicAttributes = pItem.NetworkedDynamicAttributesForDemos;
+		
+		// 设置手套的物品ID
+		SetEntProp(iEntity, Prop_Send, "m_iItemIDLow", g_iGloveItemIDLow[client]);
+		SetEntProp(iEntity, Prop_Send, "m_iItemIDHigh", g_iGloveItemIDHigh[client]);
+		
+		SetEntProp(iEntity, Prop_Send, "m_iItemDefinitionIndex", g_iStoredGlove[client]); // 设置手套种类DefIndex
+		
+		// 设置手套的皮肤ID、图案种子、磨损度
+		pDynamicAttributes.SetOrAddAttributeValue(6, float(g_iGloveSkin[client]));
+		pDynamicAttributes.SetOrAddAttributeValue(7, float(g_iGloveSeed[client]));
+		pDynamicAttributes.SetOrAddAttributeValue(8, g_fGloveWear[client]);
+		
+		// 设置手套的所有者和父实体，确保它跟随玩家
+		SetEntPropEnt(iEntity, Prop_Data, "m_hOwnerEntity", client);
+		SetEntPropEnt(iEntity, Prop_Data, "m_hParent", client);
+		SetEntPropEnt(iEntity, Prop_Data, "m_hMoveParent", client);
+		SetEntProp(iEntity, Prop_Send, "m_bInitialized", 1); // 标记为已初始化
+		
+		DispatchSpawn(iEntity); // 允许实体在游戏中正常生成
+		
+		SetEntPropEnt(client, Prop_Send, "m_hMyWearables", iEntity); // 将手套实体绑定到玩家的穿戴槽位
+		SetEntProp(client, Prop_Send, "m_nBody", 1); // 额外属性设置
+		
+		SDKCall(g_hForceUpdate, client, -1); // 强制更新客户端
+	}
+}</code></pre>
+        <ul>
+            <li><strong><code>wearable_item</code></strong>：这是 CS:GO 中用于手套、臂章等可穿戴物品的实体类型。插件会创建一个这样的实体给 BOT。</li>
+            <li><strong>属性设置</strong>：与武器类似，手套也会设置其 DefIndex、皮肤 ID、磨损和种子等属性。</li>
+            <li><strong>绑定到玩家</strong>：通过设置 <code>m_hOwnerEntity</code>、<code>m_hParent</code> 和 <code>m_hMyWearables</code> 等属性，确保手套正确地绑定在 BOT 身上。</li>
+        </ul>
+
+        <h3>2.17 插件结束与清理</h3>
+
+        <h4><code>public void OnClientDisconnect(int client)</code>：玩家（BOT）断开连接时</h4>
+        <p>当一个客户端（BOT）断开连接时，这个函数会被调用，它会移除之前为该客户端注册的 SDK 钩子，防止内存泄漏或意外行为。</p>
+        <pre><code class="language-sourcepawn">public void OnClientDisconnect(int client)
+{
+	if (IsValidClient(client))
+	{
+		SDKUnhook(client, SDKHook_OnTakeDamageAlive, OnTakeDamageAlive); // 移除伤害钩子
+		SDKUnhook(client, SDKHook_WeaponEquip, SDK_OnWeaponEquip); // 移除武器装备钩子
+	}
+}</code></pre>
+
+        <h4><code>public void OnPluginEnd()</code>：插件卸载时</h4>
+        <p>当插件被卸载或服务器关闭时，这个函数会执行，它会遍历所有在线玩家并调用 <code>OnClientDisconnect</code> 进行清理，确保所有钩子都被正确移除。</p>
+        <pre><code class="language-sourcepawn">public void OnPluginEnd()
+{
+	for (int i = 1; i &lt;= MaxClients; i++)
+	{
+		if (IsClientInGame(i))
+			OnClientDisconnect(i); // 对每个在线客户端执行断开连接清理
+	}
+}</code></pre>
+
+        <h3>2.18 辅助函数（<code>stock</code>）：实用小工具</h3>
+
+        <h4><code>stock bool IsValidClient(int client)</code></h4>
+        <p>一个常用的辅助函数，用于判断一个给定的客户端 ID 是否代表一个有效的、已连接并进入游戏的 BOT 玩家。</p>
+        <pre><code class="language-sourcepawn">stock bool IsValidClient(int client)
+{
+	return client > 0 && client &lt;= MaxClients && IsClientConnected(client) && IsClientInGame(client) && IsFakeClient(client) && !IsClientSourceTV(client);
+}</code></pre>
+        <p>这个函数会检查客户端是否在有效范围内、是否已连接、是否在游戏中、是否是 BOT (<code>IsFakeClient(client)</code>)，并且不是 SourceTV 客户端。它确保我们只对真正的 BOT 进行操作。</p>
+
+        <h4><code>stock int FloatToInt(const char[] szValue, any ...)</code></h4>
+        <p>一个将浮点数转换为整数的辅助函数，可能是为了方便字符串格式化。</p>
+        <pre><code class="language-sourcepawn">stock int FloatToInt(const char[] szValue, any ...)
+{
+	int szLen = strlen(szValue) + 255;
+	char[] szFormattedString = new char[szLen];
+	VFormat(szFormattedString, szLen, szValue, 2);
+	return StringToInt(szFormattedString);
+}</code></pre>
+        <p>虽然 SourcePawn 可以直接进行浮点数到整数的转换（强制类型转换），这个函数似乎提供了一种通过字符串格式化来实现转换的方式。在现代 SourcePawn 中可能不是必需的，但依然有效。</p>
+
+        <h4><code>stock bool IsItMyChance(float fChance = 0.0)</code></h4>
+        <p>一个简单的几率判断函数，用于进行随机决策。</p>
+        <pre><code class="language-sourcepawn">stock bool IsItMyChance(float fChance = 0.0)
+{
+	float flRand = Math_GetRandomFloat(0.0, 100.0);
+	if(fChance &lt;= 0.0)
+		return false;
+	return flRand &lt;= fChance;
+}</code></pre>
+        <p>比如 <code>IsItMyChance(40.0)</code> 会有 40% 的几率返回 <code>true</code>，用于随机决定 BOT 是否使用贴纸、臂章等。</p>
+
+        <h4><code>stock bool IsMapWeapon(int iWeapon, bool bRemove = false)</code></h4>
+        <p>用于检查一个武器实体是否在之前收集的 <code>g_ArrayMapWeapons</code> 列表（地图上生成的武器）中，并且可以选择性地将其从列表中移除。</p>
+        <pre><code class="language-sourcepawn">stock bool IsMapWeapon(int iWeapon, bool bRemove = false)
+{
+	if(g_ArrayMapWeapons == null)
+		return false;
+		
+	for(int i = 0; i &lt; g_ArrayMapWeapons.Length; i++)
+	{
+		if(g_ArrayMapWeapons.Get(i) != iWeapon)
+			continue;
+
+		if(bRemove)
+			g_ArrayMapWeapons.Erase(i);
+			
+		return true;
+	}
+	return false;
+}</code></pre>
+        <p>这个函数帮助插件识别并管理那些在地图上默认生成而非玩家掉落的武器。</p>
+
+        <p class="author-info" style="margin-top: 50px;">
+            这篇文档由 un1 创作，并由 Gemini 提供技术辅助。<br>
+            希望这份详细的解析能帮助你更好地理解这个 SourcePawn 插件，让你的 CS:GO BOT 变得更有趣！
+        </p>
+    </div>
+</body>
+</html>

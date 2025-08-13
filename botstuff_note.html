@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOT 智能行为插件解析 - 为新玩家定制</title>
+    <style>
+        /* 莫兰迪配色方案 - 浅色模式（默认）*/
+        :root {
+            --text-color: #495057; /* 深灰文本 */
+            --background-color: #F0F2F5; /* 浅灰背景 */
+            --container-bg: #FFFFFF; /* 内容区域白色背景 */
+            --header-color: #6A8EAE; /* 标题采用柔和的蓝色 */
+            --border-color: #CBD2D8; /* 浅灰蓝色边框 */
+            --code-bg: #E8F6F3; /* 柔和的浅绿色背景 */
+            --code-text: #2A524A; /* 深绿色代码文本 */
+            --code-border-left: 5px solid #A2B9BD; /* 代码块左侧边框 */
+            --strong-color: #6A8EAE; /* 强调文字 */
+            --note-bg: #F6F9FC; /* 浅米色背景 */
+            --note-border-left: 4px solid #B29DA3; /* 温柔的粉色边框 */
+            --link-color: #B29DA3; /* 链接颜色 */
+            --sidebar-bg: #F8F9FA; /* 侧边栏背景 */
+            --sidebar-border-right: 1px solid #E0E0E0;
+            --toc-active-bg: #E0E7EB; /* 目录激活背景 */
+            --toc-active-color: var(--header-color);
+        }
+
+        /* 深色模式 */
+        .dark-mode {
+            --text-color: #E2E2E2;
+            --background-color: #282C34;
+            --container-bg: #3C424E;
+            --header-color: #B4C6D4;
+            --border-color: #555B6E;
+            --code-bg: #2C303A;
+            --code-text: #A9B1BD;
+            --code-border-left: 5px solid #6A7F8C;
+            --strong-color: #B4C6D4;
+            --note-bg: #353941;
+            --note-border-left: 4px solid #9C8998;
+            --link-color: #9C8998;
+            --sidebar-bg: #21252B;
+            --sidebar-border-right: 1px solid #3A3F47;
+            --toc-active-bg: #4A505D;
+            --toc-active-color: var(--header-color);
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            display: flex; /* 使用 Flexbox 布局 */
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .sidebar {
+            width: 250px;
+            flex-shrink: 0; /* 不缩小 */
+            padding: 20px 15px;
+            background-color: var(--sidebar-bg);
+            border-right: var(--sidebar-border-right);
+            overflow-y: auto; /* 允许滚动 */
+            position: sticky; /* 粘性定位 */
+            top: 0; /* 距离顶部0 */
+            height: 100vh; /* 撑满视窗高度 */
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .sidebar h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--header-color);
+            font-size: 1.3em;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 8px;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 6px 10px;
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--toc-active-bg);
+        }
+
+        .sidebar a.active {
+            background-color: var(--toc-active-bg);
+            color: var(--toc-active-color);
+            font-weight: bold;
+        }
+
+        .content {
+            flex-grow: 1; /* 占据剩余空间 */
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--header-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 30px;
+            transition: color 0.3s ease, border-color 0.3s ease;
+        }
+        h1 { font-size: 2.2em; }
+        h2 { font-size: 1.8em; }
+        h3 { font-size: 1.5em; }
+        h4 { font-size: 1.2em; }
+        p {
+            margin-bottom: 1em;
+        }
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            margin-bottom: 1.5em;
+            border-left: var(--code-border-left);
+            transition: background-color 0.3s ease, color 0.3s ease, border-left-color 0.3s ease;
+        }
+        code {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        strong {
+            color: var(--strong-color);
+            transition: color 0.3s ease;
+        }
+        .note {
+            background-color: var(--note-bg);
+            border-left: var(--note-border-left);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, border-left-color 0.3s ease;
+        }
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .author-info {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: var(--text-color);
+        }
+
+        /* 折叠代码块样式 */
+        details {
+            margin-bottom: 1.5em;
+            background-color: var(--code-bg);
+            border-left: var(--code-border-left);
+            border-radius: 5px;
+            transition: background-color 0.3s ease, border-left-color 0.3s ease;
+        }
+        summary {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            padding: 10px 15px;
+            cursor: pointer;
+            outline: none;
+            color: var(--code-text);
+            transition: color 0.3s ease;
+        }
+        summary:hover {
+            background-color: rgba(0, 0, 0, 0.05); /* subtle hover effect */
+        }
+        details[open] summary {
+            border-bottom: 1px solid var(--border-color);
+        }
+        details pre {
+            margin: 0;
+            border-left: none; /* 内部 pre 不重复边框 */
+            border-radius: 0 0 5px 5px;
+        }
+
+        /* 顶部导航和主题切换按钮 */
+        .top-nav {
+            display: flex;
+            justify-content: flex-end;
+            padding: 10px 20px;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .theme-switch button {
+            background-color: var(--header-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+        .theme-switch button:hover {
+            background-color: #557A95;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: var(--sidebar-border-right);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>目录</h3>
+        <ul id="table-of-contents">
+            <!-- 目录将由JavaScript动态生成 -->
+        </ul>
+    </div>
+
+    <div class="content">
+        <div class="top-nav">
+            <div class="theme-switch">
+                <button id="theme-toggle">切换主题</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <h1 id="top" style="text-align: center;">BOT 智能行为插件解析</h1>
+            <p class="author-info">
+                作者: un1 powered by Gemini<br>
+                一个为CS:GO新手玩家编写的插件代码详解
+            </p>
+
+            <div class="note">
+                <p><strong>写给新手的特别提示：</strong></p>
+                <p>如果你只会基础编译，那这份文档就是为你准备的！这里不会有太多深奥的废话，我们会用最简洁的方式告诉你：这个 SourcePawn 插件的代码长什么样，以及它到底做了什么神奇的事情，让你的服务器里的 BOT 变得更聪明、更像真人！</p>
+                <p>前一份文档我们介绍了 BOT 的皮肤，这份文档则深入到 BOT 的行为逻辑。它会改善 BOT 的买枪策略、投掷物使用、走位甚至瞄准方式，让它们在游戏中表现得更出色，甚至能模仿职业哥的打法！</p>
+            </div>
+
+            <h2 id="section1">一、插件概览：它是什么？</h2>
+            <p>这个名为 "BOT Improvement" (BOT 改进) 的 SourcePawn 插件旨在<strong>大幅度提升 CS:GO 服务器中 BOT（机器人）的智能行为和拟真度</strong>。它不仅仅是给 BOT 换身好看的衣服，更深入地修改了 BOT 的内置 AI 逻辑，包括：</p>
+            <ul>
+                <li><strong>经济管理</strong>：让 BOT 更合理地在经济局、起步局购买道具。</li>
+                <li><strong>武器策略</strong>：根据情况（例如队友是否有枪）决定是否掉枪，甚至模仿职业哥的默认手枪选择。</li>
+                <li><strong>投掷物使用</strong>：引导 BOT 在关键位置进行烟雾弹、燃烧弹的投掷，甚至模仿预设投掷物。</li>
+                <li><strong>移动与瞄准</strong>：调整 BOT 的移动速度、反应时间、攻击性，甚至模拟职业哥的特定瞄准部位。</li>
+                <li><strong>Crosshair Code</strong>：为某些 BOT 应用职业玩家的准星代码。</li>
+                <li><strong>其他细节</strong>：如回合结束后的清理、BOT 队友颜色分配等，让 BOT 在游戏中表现得更像一名有经验的玩家。</li>
+            </ul>
+            <p>如果你的服务器经常和 BOT 玩耍，或者你想要你的 BOT 不再是“傻大个”，那么这个插件将带来质的飞跃。</p>
+
+            <h2 id="section2">二、代码构成详解</h2>
+
+            <h3 id="section2-1">2.1 引入头文件（<code>#include</code>）：插件的“高级工具箱”</h3>
+            <p>与上一个插件类似，这里也引入了许多现成的代码模块，但这次引入了更多专门用于底层游戏交互和 AI 操控的库。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">#pragma semicolon 1
+
+#include &lt;sourcemod>
+#include &lt;sdkhooks>
+#include &lt;sdktools>
+#include &lt;cstrike>
+#include &lt;eItems>
+#include &lt;smlib>
+#include &lt;navmesh>
+#include &lt;dhooks>
+#include &lt;botmimic>
+#include &lt;PTaH>
+#include &lt;ripext></code></pre>
+            </details>
+            <ul>
+                <li><code>#pragma semicolon 1</code>: 强制使用分号。</li>
+                <li><code>sourcemod</code>, <code>sdkhooks</code>, <code>cstrike</code>, <code>eItems</code>, <code>smlib</code>, <code>PTaH</code>: 这些在上一份文档中已经介绍过，它们提供了核心插件框架、事件钩子、CS:GO 特定功能、物品数据管理、标准库和底层游戏方法调用能力。</li>
+                <li><code>sdktools</code>: SourceMod SDK 工具集，提供了更广泛的底层操作函数，比如获取实体属性、设置实体数据等。它是 SourceMod 中非常常用的一个工具。</li>
+                <li><code>navmesh</code>: 导航网格相关，这是 BOT 进行路径规划和移动的关键。通过它，插件可以获取地图导航数据，帮助 BOT 更好地移动。</li>
+                <li><code>dhooks</code>: Dynamic Hooks (动态钩子)，比 <code>sdkhooks</code> 更强大，允许在运行时动态地拦截和修改游戏引擎中的任意 C++ 函数，是实现高级 BOT AI 的核心工具之一。</li>
+                <li><code>botmimic</code>: BOT 模仿扩展，允许 BOT 播放录制好的玩家行动，常用于模拟特定的投掷物（如烟雾、火）线路。</li>
+                <li><code>ripext</code>: Rip Extension 的缩写，一个高级扩展，提供了直接内存读写和地址操作的能力，常用于直接修改游戏内部的 C++ 对象数据。</li>
+            </ul>
+
+            <h3 id="section2-2">2.2 全局变量（<code>g_</code>）：插件的“记忆中枢”</h3>
+            <p>这个插件的全局变量非常多，因为要存储和追踪大量关于 BOT 行为状态、游戏状态和特定属性偏移量的数据。为了更好地理解，我们将其分为几类：</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">char g_szMap[128]; // 当前地图名称
+char g_szPlayerNames[5][MAX_NAME_LENGTH]; // 用于存储团队指令中的玩家名字
+char g_szCrosshairCode[MAXPLAYERS+1][35], g_szPreviousBuy[MAXPLAYERS+1][128]; // 准星代码，上次购买的武器名
+bool g_bIsBombScenario, g_bIsHostageScenario, g_bFreezetimeEnd, g_bBombPlanted, g_bEveryoneDead, g_bHalftimeSwitch, g_bIsCompetitive; // 游戏场景标志
+bool g_bUseCZ75[MAXPLAYERS+1], g_bUseUSP[MAXPLAYERS+1], g_bUseM4A1S[MAXPLAYERS+1], g_bDontSwitch[MAXPLAYERS+1], g_bDropWeapon[MAXPLAYERS+1], g_bHasGottenDrop[MAXPLAYERS+1]; // BOT武器选择和掉枪状态
+bool g_bIsProBot[MAXPLAYERS+1], g_bThrowGrenade[MAXPLAYERS+1], g_bUncrouch[MAXPLAYERS+1]; // Pro Bot 标志，投掷物状态，取消蹲伏状态
+
+int g_iProfileRank[MAXPLAYERS+1], g_iPlayerColor[MAXPLAYERS+1], g_iTarget[MAXPLAYERS+1], g_iPrevTarget[MAXPLAYERS+1], g_iDoingSmokeNum[MAXPLAYERS+1], g_iActiveWeapon[MAXPLAYERS+1]; // BOT个人资料排位，玩家颜色，当前目标，上次目标，烟雾弹编号，当前武器
+int g_iCurrentRound, g_iRoundsPlayed, g_iCTScore, g_iTScore, g_iMaxNades; // 回合信息，比分，最大投掷物数量
+int g_iProfileRankOffset, g_iPlayerColorOffset; // 玩家资源类中的属性偏移量
+int g_iBotTargetSpotOffset, g_iBotNearbyEnemiesOffset, g_iFireWeaponOffset, g_iEnemyVisibleOffset, g_iBotProfileOffset, g_iBotSafeTimeOffset, g_iBotEnemyOffset, g_iBotLookAtSpotStateOffset, g_iBotMoraleOffset, g_iBotTaskOffset, g_iBotDispositionOffset; // BOT内部C++对象属性的偏移量（非常关键）
+float g_fBotOrigin[MAXPLAYERS+1][3], g_fTargetPos[MAXPLAYERS+1][3], g_fNadeTarget[MAXPLAYERS+1][3]; // BOT坐标，目标坐标，投掷物目标坐标
+float g_fRoundStart, g_fFreezeTimeEnd; // 回合开始时间，冻结时间结束时间
+float g_fLookAngleMaxAccel[MAXPLAYERS+1], g_fReactionTime[MAXPLAYERS+1], g_fAggression[MAXPLAYERS+1], g_fShootTimestamp[MAXPLAYERS+1], g_fThrowNadeTimestamp[MAXPLAYERS+1], g_fCrouchTimestamp[MAXPLAYERS+1]; // BOT瞄准速度，反应时间，攻击性，射击时间戳，投掷物时间戳，蹲伏时间戳
+ConVar g_cvBotEcoLimit; // 经济限制控制台变量
+
+Handle g_hBotMoveTo; // BOT移动函数句柄
+Handle g_hLookupBone; // 查找骨骼函数句柄
+Handle g_hGetBonePosition; // 获取骨骼位置函数句柄
+Handle g_hBotIsVisible; // BOT是否可见函数句柄
+Handle g_hBotIsHiding; // BOT是否在藏身函数句柄
+Handle g_hBotEquipBestWeapon; // BOT装备最佳武器函数句柄
+Handle g_hBotSetLookAt; // BOT看向某点函数句柄
+Handle g_hSetCrosshairCode; // 设置准星代码函数句柄
+Handle g_hSwitchWeaponCall; // 切换武器函数句柄
+Handle g_hIsLineBlockedBySmoke; // 线是否被烟雾阻挡函数句柄
+Handle g_hBotBendLineOfSight; // BOT弯曲视线函数句柄
+Handle g_hBotThrowGrenade; // BOT投掷手雷函数句柄
+Handle g_hAddMoney; // 添加金钱函数句柄
+Address g_pTheBots; // BOT管理器全局地址
+
+CNavArea g_pCurrArea[MAXPLAYERS+1]; // BOT当前导航区域
+
+//BOT Nades Variables (BOT投掷物数据)
+float g_fNadePos[128][3], g_fNadeLook[128][3]; // 投掷物位置，看向点
+int g_iNadeDefIndex[128]; // 投掷物DefIndex
+char g_szReplay[128][128]; // 录制好的投掷动作回放文件路径
+float g_fNadeTimestamp[128]; // 投掷物冷却时间戳
+int g_iNadeTeam[128]; // 投掷物所属队伍
+
+static char g_szBoneNames[][] =  { /* 骨骼名称列表 */ }; // 用于通用骨骼查找
+
+enum RouteType { /* 导航路径类型 */ }
+enum PriorityType { /* 优先级类型 */ }
+enum LookAtSpotState { /* BOT看向点状态 */ }
+enum GrenadeTossState { /* 投掷手雷状态 */ }
+enum TaskType { /* BOT任务类型 */ }
+enum DispositionType { /* BOT行为倾向类型 */ }
+enum GamePhase { /* 游戏阶段 */ }</code></pre>
+            </details>
+            <ul>
+                <li><strong>状态标志 (<code>bool g_b...</code>)</strong>: 记录游戏回合状态（如是否处于冻结时间结束、炸弹是否已下），以及 BOT 自身行为状态（如是否掉枪、是否是“职业BOT”）。</li>
+                <li><strong>统计数据 (<code>int g_i...</code>, <code>float g_f...</code>)</strong>: 存储每个 BOT 的个人属性（如排位、颜色），游戏比分，以及 BOT 实时位置、目标位置等。</li>
+                <li><strong>偏移量 (<code>int g_i...Offset</code>, <code>Address g_p...</code>)</strong>: 这是插件深入修改游戏内部 BOT 行为的关键。游戏中的 BOT 拥有自己的 C++ 对象，这些对象内部有许多属性（比如“目标位置”、“附近敌人数量”等）。插件通过“偏移量”直接访问和修改这些属性，来改变 BOT 的行为。</li>
+                <li><strong>句柄 (<code>Handle g_h...</code>)</strong>: 与上一份文档类似，是 SourceMod 找到并可以调用的游戏内部函数的“控制器”。</li>
+                <li><strong>BOT 投掷物变量</strong>: <code>g_fNadePos</code>, <code>g_szReplay</code> 等专门用于存储从配置文件读取的预设投掷物信息，包括投掷位置、视角、以及录制好的投掷动作回放文件。</li>
+                <li><strong>骨骼名称列表 (<code>g_szBoneNames</code>)</strong>: 存储了常用的骨骼名称，以便 BOT 可以精确瞄准对手的不同部位。</li>
+            </ul>
+
+            <h3 id="section2-3">2.3 枚举（<code>enum</code>）：定义行为的“标签”</h3>
+            <p>枚举是一系列有名字的常量，让代码更易读。在这里，它们定义了 BOT 可能的各种行为模式、状态和游戏阶段。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">enum RouteType // 导航路径类型
+{
+	DEFAULT_ROUTE = 0, // 默认路径
+	FASTEST_ROUTE,     // 最快路径
+	SAFEST_ROUTE,      // 最安全路径
+	RETREAT_ROUTE      // 撤退路径
+}
+
+enum PriorityType // 任务优先级
+{
+	PRIORITY_LOWEST = -1,
+	PRIORITY_LOW, 
+	PRIORITY_MEDIUM, 
+	PRIORITY_HIGH, 
+	PRIORITY_UNINTERRUPTABLE // 不可中断
+}
+
+enum LookAtSpotState // BOT看向某个点的状态
+{
+	NOT_LOOKING_AT_SPOT, // 没看
+	LOOK_TOWARDS_SPOT,   // 正在看过去
+	LOOK_AT_SPOT,        // 正在看
+	NUM_LOOK_AT_SPOT_STATES
+}
+
+enum GrenadeTossState // 投掷手雷状态
+{
+	NOT_THROWING,    // 未投掷
+	START_THROW,     // 开始投掷
+	THROW_LINED_UP,  // 瞄准完毕
+	FINISH_THROW     // 投掷完成
+}
+
+enum TaskType // BOT当前执行的任务类型
+{
+	SEEK_AND_DESTROY, // 搜寻并摧毁
+	PLANT_BOMB,       // 安放炸弹
+	FIND_TICKING_BOMB,// 找到正在计时炸弹
+	DEFUSE_BOMB,      // 拆除炸弹
+	// ... 更多任务类型，如守点、跟随、营救人质等
+	NUM_TASKS
+}
+
+enum DispositionType // BOT行为倾向（攻击性、保守性）
+{
+	ENGAGE_AND_INVESTIGATE, // 交战并调查（积极）
+	OPPORTUNITY_FIRE,       // 伺机开火（较积极）
+	SELF_DEFENSE,           // 自我防卫（保守）
+	IGNORE_ENEMIES,         // 忽略敌人（极度保守，用于逃跑或特定行为）
+	NUM_DISPOSITIONS
+}
+
+enum GamePhase // 游戏阶段
+{
+	GAMEPHASE_WARMUP_ROUND,    // 热身赛
+	GAMEPHASE_PLAYING_STANDARD, // 标准比赛
+	GAMEPHASE_PLAYING_FIRST_HALF, // 上半场
+	GAMEPHASE_PLAYING_SECOND_HALF, // 下半场
+	GAMEPHASE_HALFTIME,         // 半场休息
+	GAMEPHASE_MATCH_ENDED,      // 比赛结束
+	GAMEPHASE_MAX
+}</code></pre>
+            </details>
+            <p>这些枚举让插件能够以更清晰和结构化的方式控制 BOT 的复杂行为，例如：设置 BOT 走哪种路径（最快还是最安全），让它进入哪种攻击状态（积极交战还是自我防卫），以及当前在执行什么任务（下包还是找敌人）。</p>
+
+            <h3 id="section2-4">2.4 插件信息（<code>Plugin myinfo</code>）</h3>
+            <p>标准插件信息，指示了插件的名称、作者、版本和描述。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public Plugin myinfo = 
+{
+	name = "BOT Improvement", 
+	author = "manico", 
+	description = "Improves bots and does other things.", 
+	version = "1.2.0", 
+	url = "http://steamcommunity.com/id/manico001"
+};</code></pre>
+            </details>
+
+            <h3 id="section2-5">2.5 插件加载与初始化</h3>
+
+            <h4 id="section2-5-1"><code>public void OnPluginStart()</code>：插件启动时！</h4>
+            <p>这是插件加载时执行的第一个函数。它负责配置基础设置、钩子游戏事件和加载所有必要的底层 SDK 函数与代码段替换（Detours）。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnPluginStart()
+{	
+	// 判断是否是竞技模式
+	g_bIsCompetitive = FindConVar("game_mode").IntValue == 1 && FindConVar("game_type").IntValue == 0 ? true : false;
+
+	// 钩子各种游戏事件：当事件发生时，会调用我们定义的函数
+	HookEventEx("player_spawn", OnPlayerSpawn); // 玩家出生
+	HookEventEx("round_prestart", OnRoundPreStart); // 回合开始前
+	HookEventEx("round_start", OnRoundStart); // 回合开始
+	HookEventEx("round_end", OnRoundEnd); // 回合结束
+	HookEventEx("round_freeze_end", OnFreezetimeEnd); // 冻结时间结束
+	HookEventEx("weapon_zoom", OnWeaponZoom); // 武器瞄准
+	HookEventEx("weapon_fire", OnWeaponFire); // 武器开火
+	
+	LoadSDK();     // 加载SDK（游戏内部C++函数）的地址和偏移量
+	LoadDetours(); // 加载Detours（函数劫持）来修改游戏行为
+	
+	g_cvBotEcoLimit = FindConVar("bot_eco_limit"); // 获取bot经济限制的控制台变量
+	
+	RegConsoleCmd("team", Command_Team); // 注册一个自定义控制台命令
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>竞技模式检测</strong>：判断当前服务器是否运行在竞技模式，因为某些 BOT 行为可能只适用于竞技。</li>
+                <li><strong>事件钩子 (<code>HookEventEx</code>)</strong>：与 <code>HookEvent</code> 类似，但在一些更高级的场景下使用。它确保插件能在关键游戏时刻（如玩家出生、回合开始、武器开火）执行自定义逻辑。</li>
+                <li><strong><code>LoadSDK()</code> 和 <code>LoadDetours()</code></strong>：这两个函数是本插件的精华所在。它们负责获取游戏内部函数和变量的内存地址，以及设置“代码段替换”（函数劫持），从而让插件可以直接控制 BOT 的核心 AI 逻辑。</li>
+                <li><strong><code>RegConsoleCmd("team", Command_Team)</code></strong>：注册了一个名为 <code>team</code> 的自定义命令，允许管理员在控制台使用这个命令与插件交互，例如快速设置 BOT 阵容。</li>
+            </ul>
+
+            <h4 id="section2-5-2"><code>public Action Command_Team(...)</code>：新的“团队”指令</h4>
+            <p>这是一个自定义的控制台命令 <code>team</code>，允许直接在服务器中通过配置好的 BOT 名单和队伍 Logo 来管理 BOT。它适用于希望快速设置自定义 BOT 团队来与玩家对战的场景。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public Action Command_Team(int client, int iArgs)
+{
+    // ... 参数检查和文件加载
+	BuildPath(Path_SM, szPath, sizeof(szPath), "configs/bot_rosters.txt"); // 构建bot名单配置文件路径
+	// ... 导入KeyValues文件并解析队伍信息
+    
+    // 从配置文件中获取玩家名字列表和队伍Logo
+    char szPlayers[256], szLogo[64];
+    kv.GetString("players", szPlayers, sizeof(szPlayers));
+    kv.GetString("logo", szLogo, sizeof(szLogo));
+
+    ServerCommand("bot_kick %s all", szSide); // 先踢掉所有该阵营的BOT
+
+    char szPlayerName[MAX_NAME_LENGTH];
+    int iIndex, iCount = ExplodeString(szPlayers, ",", g_szPlayerNames, sizeof(g_szPlayerNames), sizeof(szPlayerName));
+
+    for (iIndex = 0; iIndex &lt; iCount; iIndex++)
+    {
+        Format(szPlayerName, sizeof(szPlayerName), "%s", g_szPlayerNames[iIndex]);
+        ServerCommand("bot_add_%s %s", szSide, szPlayerName); // 逐个添加BOT
+    }
+
+    // 设置队伍Logo
+    if (StrEqual(szSide, "ct", false))
+        ServerCommand("mp_teamlogo_1 %s", szLogo);
+    else if (StrEqual(szSide, "t", false))
+        ServerCommand("mp_teamlogo_2 %s", szLogo);
+
+	delete kv;
+    return Plugin_Handled;
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>配置文件读取</strong>：从 <code>configs/bot_rosters.txt</code> 读取预设的 BOT 团队名单和 Logo 信息。这个文件需要你提前创建和配置好。</li>
+                <li><strong>动态添加 BOT</strong>：根据配置文件中的名字，动态地踢出旧 BOT 并添加新的 BOT，并为他们的队伍设置 Logo。</li>
+            </ul>
+
+            <h4 id="section2-5-3"><code>public void OnMapStart()</code>：地图加载时！</h4>
+            <p>每当新地图加载时，这个函数会执行。它初始化和刷新插件跟踪的游戏状态和数据。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnMapStart()
+{
+	g_iProfileRankOffset = FindSendPropInfo("CCSPlayerResource", "m_nPersonaDataPublicLevel"); // 查找个人排位属性偏移
+	g_iPlayerColorOffset = FindSendPropInfo("CCSPlayerResource", "m_iCompTeammateColor"); // 查找队友颜色属性偏移
+
+	GetCurrentMap(g_szMap, sizeof(g_szMap)); // 获取当前地图名
+	GetMapDisplayName(g_szMap, g_szMap, sizeof(g_szMap)); // 获取地图显示名
+	ParseMapNades(g_szMap); // 解析地图特定的投掷物数据
+
+	g_bIsBombScenario = IsValidEntity(FindEntityByClassname(-1, "func_bomb_target")); // 判断是否是爆破模式地图
+	g_bIsHostageScenario = IsValidEntity(FindEntityByClassname(-1, "func_hostage_rescue")); // 判断是否是人质模式地图
+
+	// 创建定时器，以固定间隔执行某些检查和行为
+	CreateTimer(1.0, Timer_CheckPlayer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(0.1, Timer_MoveToBomb, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+
+	SDKHook(GetPlayerResourceEntity(), SDKHook_ThinkPost, OnThinkPost); // 钩子玩家资源实体的ThinkPost事件
+
+	Array_Fill(g_iPlayerColor, MaxClients + 1, -1); // 初始化玩家颜色数组
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>属性偏移量查找</strong>：查找玩家资源（PlayerResource）中用于显示排位和队友颜色的一些属性在内存中的位置。</li>
+                <li><strong>地图信息与投掷物解析</strong>：获取当前地图名称并解析地图特定的预设投掷物数据，这些数据通常存储在 <code>configs/bot_nades.txt</code> 文件中。</li>
+                <li><strong>场景检测</strong>：判断当前地图是爆破模式还是人质模式，这将影响 BOT 的任务分配。</li>
+                <li><strong>循环定时器</strong>：启动两个定时器，<code>Timer_CheckPlayer</code>（每秒执行一次，用于 BOT 购买和随机行为）和 <code>Timer_MoveToBomb</code>（每0.1秒执行一次，用于 BOT 移动到 C4）。</li>
+                <li><strong><code>OnThinkPost</code> 钩子</strong>：钩子 <code>CCSPlayerResource</code> 实体的 <code>ThinkPost</code> 事件，以便在游戏每一帧结束后，更新所有玩家的排位和队友颜色信息。</li>
+            </ul>
+
+            <h4 id="section2-5-4"><code>public Action Timer_CheckPlayer(...)</code>：BOT 购买和随机行为逻辑</h4>
+            <p>这个定时器每秒运行一次，负责处理 BOT 在购买区的购买行为，以及一些随机的非战斗行为。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public Action Timer_CheckPlayer(Handle hTimer, any data)
+{
+	for (int i = 1; i &lt;= MaxClients; i++)
+	{
+		if (IsValidClient(i) && IsFakeClient(i) && IsPlayerAlive(i)) // 确保是活着的有效BOT
+		{
+			// ... 获取BOT的经济、武器、是否在购买区等信息
+			
+			if (IsItMyChance(2.0)) // 2%几率随机进行武器检视
+			{
+				FakeClientCommand(i, "+lookatweapon");
+				FakeClientCommand(i, "-lookatweapon");
+			}
+			
+			if(!bInBuyZone) // 不在购买区则跳过后续购买逻辑
+				continue;
+			
+			// 如果有主武器或队友有主武器且自己不是手枪，则购买护甲和拆弹器
+			if (IsValidEntity(iPrimary) || (GetFriendsWithPrimary(i) >= 1 && !IsDefaultPistol(szCurrentWeapon)))
+			{
+				if (GetEntProp(i, Prop_Data, "m_ArmorValue") &lt; 50 || GetEntProp(i, Prop_Send, "m_bHasHelmet") == 0)
+					FakeClientCommand(i, "buy vesthelm"); // 买甲
+				
+				if (iTeam == CS_TEAM_CT && !bHasDefuser)
+					FakeClientCommand(i, "buy defuser"); // CT买拆弹器
+				
+				if(GetGameTime() - g_fRoundStart > 6.0 && !g_bFreezetimeEnd) // 冻结时间还没结束，过了一段时间才买投掷物
+				{
+					// 随机购买投掷物组合，如烟雾弹、闪光弹、HE弹、燃烧弹
+				}
+			}
+			
+			// 经济局购买手枪或护甲
+			if ((iAccount &lt; g_cvBotEcoLimit.IntValue && iAccount > 2000 && !IsValidEntity(iPrimary)) || GetFriendsWithPrimary(i) >= 1)
+			{
+				if(IsDefaultPistol(szCurrentWeapon))
+				{
+					// 随机购买P250, Tec9, Deagle
+				}
+				else
+				{
+					// 1/15 几率买护甲
+				}
+			}
+			
+			if (g_iCurrentRound == 0 || g_iCurrentRound == 12) // 起步局和关键局的特殊购买
+			{
+				// 随机购买护甲或手枪
+			}
+		}
+	}
+	return Plugin_Continue;
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>武器检视</strong>：BOT 会有小几率做出检视武器的动作，增加真实感。</li>
+                <li><strong>购买策略</strong>：根据 BOT 当前的经济状况、是否拥有主武器以及队友的情况，智能地购买护甲、拆弹器、手枪和投掷物。这模拟了竞技比赛中的“全枪全弹”、“半起”和“手枪局”等购买策略。</li>
+            </ul>
+
+            <h4 id="section2-5-5"><code>public Action Timer_MoveToBomb(...)</code>：BOT 寻找 C4 逻辑</h4>
+            <p>这个定时器每 0.1 秒运行一次，主要处理 CT 方 BOT 在炸弹被安放后，如何行动去寻找并处理 C4。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public Action Timer_MoveToBomb(Handle hTimer, any data)
+{
+	for (int i = 1; i &lt;= MaxClients; i++)
+	{
+		if (!IsValidClient(i) || !IsFakeClient(i) || !IsPlayerAlive(i))
+			continue;
+
+		if (!g_bBombPlanted) // 如果炸弹没被安放，则跳过
+			continue;
+
+		int iPlantedC4 = FindEntityByClassname(-1, "planted_c4"); // 找到已安放的C4实体
+		if (!IsValidEntity(iPlantedC4) || GetClientTeam(i) != CS_TEAM_CT) // 确保C4存在且是CT方BOT
+			continue;
+
+		float fC4Pos[3];
+		GetEntPropVector(iPlantedC4, Prop_Send, "m_vecOrigin", fC4Pos); // 获取C4位置
+
+		float fDistanceToBomb = GetVectorDistance(g_fBotOrigin[i], fC4Pos); // 计算BOT到C4的距离
+		int iCTCount = GetAliveTeamCount(CS_TEAM_CT);
+		int iTCount = GetAliveTeamCount(CS_TEAM_T);
+		// 判断是否为残局情况：T方0人且CT方1人（包点远处）
+		bool bLastMan = (iTCount == 0 && iCTCount == 1 && fDistanceToBomb > 30.0 && GetTask(i) != ESCAPE_FROM_BOMB);
+
+		// 如果是残局，或者C4距离很远（超过2000单位），且附近没敌人，也没被禁用切换武器
+		if ((bLastMan || fDistanceToBomb > 2000.0) && GetEntData(i, g_iBotNearbyEnemiesOffset) == 0 && !g_bDontSwitch[i])
+		{
+			SDKCall(g_hSwitchWeaponCall, i, GetPlayerWeaponSlot(i, CS_SLOT_KNIFE), 0); // 切换到刀
+			BotMoveTo(i, fC4Pos, FASTEST_ROUTE); // 跑到C4位置
+		}
+	}
+	return Plugin_Continue;
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>C4追踪</strong>：识别地图上是否有已安放的 C4。</li>
+                <li><strong>残局策略</strong>：在残局（CT 1V0 时），如果 C4 距离较远，BOT 会自动切刀加速移动到 C4 点，这模拟了职业玩家的跑刀残局策略。</li>
+            </ul>
+
+            <h4 id="section2-5-6"><code>public Action Timer_DropWeapons(...)</code>：BOT 掉枪（Eco局）逻辑</h4>
+            <p>这个定时器处理 BOT 在经济局为队友掉落武器的行为，模拟了竞技游戏中常见的起步策略。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public Action Timer_DropWeapons(Handle hTimer, any data)
+{
+	if (GetGameTime() - g_fRoundStart &lt;= 3.0) // 回合开始3秒内不掉枪
+		return Plugin_Continue;
+
+	for (int i = 1; i &lt;= MaxClients; i++) // 遍历所有玩家（可能是要枪的BOT）
+	{
+		if (g_bHasGottenDrop[i] || !IsValidClient(i) || !IsPlayerAlive(i))
+			continue; // 如果已经收到掉落或无效BOT，跳过
+
+		if (g_bFreezetimeEnd) // 冻结时间结束不掉枪
+			continue;
+
+		bool bInBuyZone = !!GetEntProp(i, Prop_Send, "m_bInBuyZone");
+		if (!bInBuyZone) // 不在购买区不掉枪
+			continue;
+
+		int iPrimary = GetPlayerWeaponSlot(i, CS_SLOT_PRIMARY);
+		int iAccount = GetEntProp(i, Prop_Send, "m_iAccount");
+
+		if (IsValidEntity(iPrimary) || iAccount >= g_cvBotEcoLimit.IntValue)
+			continue; // 如果有主武器或钱够，不掉枪
+
+		int iTeam = GetClientTeam(i);
+
+		for (int j = 1; j &lt;= MaxClients; j++) // 遍历所有玩家（可能是要掉枪的BOT）
+		{
+			if (g_bDropWeapon[j] || !IsValidClient(j) || !IsFakeClient(j) || !IsPlayerAlive(j))
+				continue; // 如果已经掉过枪或无效BOT，跳过
+
+			if (GetClientTeam(j) != iTeam)
+				continue; // 不同队伍跳过
+
+			int iOtherPrimary = GetPlayerWeaponSlot(j, CS_SLOT_PRIMARY);
+			if (!IsValidEntity(iOtherPrimary))
+				continue; // 掉枪者没有主武器，跳过
+
+			// ... 检查掉枪者是否有足够经济买下当前武器
+			
+			float fEyes[3];
+			GetClientEyePosition(i, fEyes); // 获取要枪者眼睛位置
+
+            // 让掉枪者看向要枪者，准备掉武器
+			BotSetLookAt(j, "Use entity", fEyes, PRIORITY_HIGH, 3.0, false, 5.0, false);
+			g_bDropWeapon[j] = true; // 标记已掉枪
+			g_bHasGottenDrop[i] = true; // 标记已收到枪
+			break;
+		}
+	}
+	return g_bFreezetimeEnd ? Plugin_Stop : Plugin_Continue; // 冻结时间结束则停止定时器
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>经济局识别</strong>：判断 BOT 是否处于经济局，以及是否有队友需要援助。</li>
+                <li><strong>掉枪决策</strong>：有钱的 BOT 会判断队友是否有主武器或经济是否不足，然后决定是否为他们掉落当前的主武器。</li>
+                <li><strong>LookAt 行为</strong>：掉枪的 BOT 会转向队友，模拟真实的掉枪动作。</li>
+            </ul>
+
+            <h4 id="section2-5-7"><code>public void OnMapEnd()</code>：地图结束和清理</h4>
+            <p>当地图结束时，移除之前注册的 <code>OnThinkPost</code> 钩子，防止在地图切换时出现问题。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnMapEnd()
+{
+	SDKUnhook(GetPlayerResourceEntity(), SDKHook_ThinkPost, OnThinkPost);
+}</code></pre>
+            </details>
+
+            <h4 id="section2-5-8"><code>public void OnClientPostAdminCheck(...)</code>：客户端加载完毕时</h4>
+            <p>当一个玩家（包括 BOT）完全加载到服务器并准备好进入游戏时，这个函数会被调用。它是 BOT 智能行为初始化的关键。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnClientPostAdminCheck(int client)
+{
+	g_iProfileRank[client] = Math_GetRandomInt(1, 40); // 随机分配BOT的个人资料排位
+
+	if (!IsFakeClient(client)) // 如果是真实玩家
+	{
+		char szColor[64];
+		GetClientInfo(client, "cl_color", szColor, sizeof(szColor)); // 获取玩家的队友颜色
+		g_iPlayerColor[client] = StringToInt(szColor);
+		return;
+	}
+
+	char szBotName[MAX_NAME_LENGTH];
+	GetClientName(client, szBotName, sizeof(szBotName));
+	g_bIsProBot[client] = false;
+
+	if (IsProBot(szBotName, g_szCrosshairCode[client], 35)) // 判断是否是“职业BOT”
+	{
+		// 根据特定的职业哥名字设置极端的AI属性
+		if (strcmp(szBotName, "s1mple") == 0 || strcmp(szBotName, "ZywOo") == 0 || strcmp(szBotName, "NiKo") == 0 ||
+		    strcmp(szBotName, "sh1ro") == 0 || strcmp(szBotName, "jL") == 0 || strcmp(szBotName, "donk") == 0 ||
+		    strcmp(szBotName, "m0NESY") == 0)
+		{
+			g_fLookAngleMaxAccel[client] = 20000.0; // 极快的瞄准速度
+			g_fReactionTime[client] = 0.0;         // 即时反应时间
+			g_fAggression[client] = 1.0;          // 极高攻击性
+		}
+		else // 其他职业BOT随机属性
+		{
+			g_fLookAngleMaxAccel[client] = Math_GetRandomFloat(4000.0, 7000.0);
+			g_fReactionTime[client] = Math_GetRandomFloat(0.165, 0.325);
+			g_fAggression[client] = Math_GetRandomFloat(0.0, 1.0);
+		}
+
+		g_bIsProBot[client] = true;
+	}
+
+	// 随机决定BOT使用哪些默认武器的改版
+	g_bUseUSP[client] = IsItMyChance(75.0); // 75%几率CT方用USP
+	g_bUseM4A1S[client] = IsItMyChance(50.0); // 50%几率CT方用M4A1-S
+	g_bUseCZ75[client] = IsItMyChance(20.0); // 20%几率用CZ75
+	g_pCurrArea[client] = INVALID_NAV_AREA; // 初始化导航区域
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>个人排位与队友颜色</strong>：为 BOT 随机分配排位，并为真实玩家（若存在）获取他们的队友颜色，以便后续显示。</li>
+                <li><strong>“职业 BOT”识别与属性设置</strong>：插件会检查 BOT 的名字是否在 <code>data/bot_info.json</code> 文件中定义为“职业选手”。如果是，会给这些 BOT 赋予更强的 AI 属性（如极快的瞄准加速、接近零的反应时间、极高的攻击性），从而模拟职业选手的行为。</li>
+                <li><strong>武器偏好</strong>：随机决定 BOT 在购买时是否偏好使用 USP-S (而非 P2000)、M4A1-S (而非 M4A4) 和 CZ75 (而非 Tec-9/Five-SeveN)。</li>
+            </ul>
+
+            <h4 id="section2-5-9"><code>public void OnRoundPreStart(...)</code>：回合开始前</h4>
+            <p>在回合正式开始前，更新当前回合数，并根据竞技模式和半场情况调整 BOT 的经济限制。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnRoundPreStart(Event eEvent, char[] szName, bool bDontBroadcast)
+{
+	g_iCurrentRound = GameRules_GetProp("m_totalRoundsPlayed"); // 获取当前总回合数
+	
+	g_cvBotEcoLimit.IntValue = ShouldForce() ? 0 : 3000; // 如果是关键局（半场、赛点、最终回合），则bot经济限制为0（强制全起），否则为3000
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>经济局控制</strong>：通过 <code>bot_eco_limit</code> 这个控制台变量，插件可以在关键回合（如半场结束前、赛点局、加时赛等）强制 BOT 进行“全起”，即使他们经济不足，也会尝试买最好的装备。这模拟了职业比赛中关键局的经济策略。</li>
+            </ul>
+
+            <h4 id="section2-5-10"><code>public void OnRoundStart(...)</code>：回合开始时</h4>
+            <p>每个回合开始时，重置 BOT 的临时状态，并根据游戏模式更新 BOT 的士气等属性。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnRoundStart(Event eEvent, char[] szName, bool bDontBroadcast)
+{
+	// 根据是爆破还是人质模式，决定T/CT队伍的角色（进攻/防守方）
+	int iTeam = g_bIsBombScenario ? CS_TEAM_CT : CS_TEAM_T;
+	int iOppositeTeam = g_bIsBombScenario ? CS_TEAM_T : CS_TEAM_CT;
+
+	g_bFreezetimeEnd = false; // 重置冻结时间结束标志
+	g_bEveryoneDead = false; // 重置所有人都死亡标志
+	g_fRoundStart = GetGameTime(); // 记录回合开始时间
+
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		// ... 重置各种BOT状态标志（如是否蹲伏、是否掉枪、目标等）
+		// 根据游戏模式和半场切换，调整BOT的m_morale（士气/自信心），影响其行为倾向
+		if (g_bIsBombScenario || g_bIsHostageScenario)
+		{
+			int iClientTeam = GetClientTeam(i);
+			if (iClientTeam == iTeam) // 比如，爆破模式下CT方士气-3（被动）
+				SetEntData(i, g_iBotMoraleOffset, -3);
+			if (g_bHalftimeSwitch && iClientTeam == iOppositeTeam) // 半场切换后，士气+1
+				SetEntData(i, g_iBotMoraleOffset, 1);
+		}
+	}
+
+	g_bHalftimeSwitch = false; // 重置半场切换标志
+
+	if (g_bIsCompetitive)
+		CreateTimer(0.2, Timer_DropWeapons, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE); // 竞技模式启动掉枪定时器
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>状态重置</strong>：确保每个回合开始时，BOT 的临时行为状态（如是否取消蹲伏、是否应该扔手雷）都得到重置。</li>
+                <li><strong>士气调整</strong>：根据当前的游戏模式（爆破/人质）以及是否进行过半场切换，调整 BOT 的 <code>m_morale</code> (士气) 属性。士气会影响 BOT 的侵略性，例如在作为防守方时可能更保守，切换阵营后可能更积极。</li>
+                <li><strong>掉枪定时器</strong>：在竞技模式下，启动 <code>Timer_DropWeapons</code> 定时器，处理 BOT 的掉枪经济策略。</li>
+            </ul>
+
+            <h4 id="section2-5-11"><code>public void OnRoundEnd(...)</code>：回合结束时</h4>
+            <p>回合结束时，更新比分，并确保所有 BOT 停止模仿动作。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnRoundEnd(Event eEvent, char[] szName, bool bDontBroadcast)
+{
+	// 遍历并获取当前团队比分
+	int iEnt = -1;
+	while ((iEnt = FindEntityByClassname(iEnt, "cs_team_manager")) != -1)
+	{
+		int iTeamNum = GetEntProp(iEnt, Prop_Send, "m_iTeamNum");
+		if (iTeamNum == CS_TEAM_CT)
+			g_iCTScore = GetEntProp(iEnt, Prop_Send, "m_scoreTotal");
+		else if (iTeamNum == CS_TEAM_T)
+			g_iTScore = GetEntProp(iEnt, Prop_Send, "m_scoreTotal");
+	}
+
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidClient(i) && IsFakeClient(i) && BotMimic_IsPlayerMimicing(i))
+			BotMimic_StopPlayerMimic(i); // 停止所有BOT的模仿动作
+	}
+
+	g_iRoundsPlayed = g_iCTScore + g_iTScore; // 更新总回合数
+
+	// 重置所有预设投掷物的冷却时间
+	for (int i = 0; i &lt; g_iMaxNades; i++)
+		g_fNadeTimestamp[i] = 0.0;
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>比分更新</strong>：获取并更新当前回合结束后 T 和 CT 双方的比分。</li>
+                <li><strong>停止模仿</strong>：确保所有正在执行 BOT 模仿动作的 BOT 都停止，以免影响下一回合。</li>
+                <li><strong>投掷物冷却重置</strong>：清除所有预设投掷物的冷却时间，使得 BOT 在新回合可以再次使用。</li>
+            </ul>
+
+            <h4 id="section2-5-12"><code>public void OnFreezetimeEnd(...)</code>：冻结时间结束时</h4>
+            <p>当回合的冻结时间结束（玩家可以自由移动和射击）时，更新相关标志。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnFreezetimeEnd(Event eEvent, char[] szName, bool bDontBroadcast)
+{
+	g_bFreezetimeEnd = true; // 设置冻结时间结束标志
+	g_fFreezeTimeEnd = GetGameTime(); // 记录冻结时间结束的时刻
+}</code></pre>
+            </details>
+
+            <h4 id="section2-5-13"><code>public void OnWeaponZoom(...)</code>：武器瞄准时</h4>
+            <p>当玩家或 BOT 使用狙击枪（或 AUG/SG）进行瞄准时，记录下时间戳。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnWeaponZoom(Event eEvent, const char[] szName, bool bDontBroadcast)
+{
+	int client = GetClientOfUserId(eEvent.GetInt("userid"));
+	if (!IsValidClient(client) || !IsFakeClient(client) || !IsPlayerAlive(client))
+		return;
+
+	g_fShootTimestamp[client] = GetGameTime(); // 记录瞄准操作发生的时间
+}</code></pre>
+            </details>
+            <p>这个时间戳可能用于后续的 BOT 行为判断，例如瞄准后开枪的延迟。</p>
+
+            <h4 id="section2-5-14"><code>public void OnWeaponFire(...)</code>：武器开火时</h4>
+            <p>当玩家或 BOT 开火时，这个函数会进行一些调整，特别是针对狙击枪的“快切”。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnWeaponFire(Event eEvent, const char[] szName, bool bDontBroadcast)
+{
+	int client = GetClientOfUserId(eEvent.GetInt("userid"));
+	if (!IsValidClient(client) || !IsFakeClient(client) || !IsPlayerAlive(client))
+		return;
+
+	char szWeaponName[64];
+	eEvent.GetString("weapon", szWeaponName, sizeof(szWeaponName));
+
+	if (IsValidClient(g_iTarget[client])) // 如果BOT有目标敌人
+	{
+		float fTargetLoc[3];
+		GetClientAbsOrigin(g_iTarget[client], fTargetLoc);
+
+		float fRangeToEnemy = GetVectorDistance(g_fBotOrigin[client], fTargetLoc);
+		if (strcmp(szWeaponName, "weapon_deagle") == 0 && fRangeToEnemy > 100.0) // 如果是沙鹰且距离超过100单位
+		{
+			// 增加沙鹰开火后的冷却时间，模拟现实中的沙鹰难用
+			float currentOffset = GetEntDataFloat(client, g_iFireWeaponOffset);
+			SetEntDataFloat(client, g_iFireWeaponOffset, currentOffset + Math_GetRandomFloat(0.20, 0.40));
+		}
+	}
+
+	if ((strcmp(szWeaponName, "weapon_awp") == 0 || strcmp(szWeaponName, "weapon_ssg08") == 0) && IsItMyChance(50.0))
+		RequestFrame(BeginQuickSwitch, GetClientUserId(client)); // 狙击枪有50%几率执行快切
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>沙鹰难度模拟</strong>：为沙鹰增加额外的开火冷却，使得 BOT 的沙鹰使用者不会过于强势。</li>
+                <li><strong>狙击枪快切</strong>：BOT 在使用 AWP 或 SSG08 开火后，有 50% 几率执行“切刀-切回主武器”的快切操作，模仿职业狙击手的习惯。</li>
+            </ul>
+
+            <h4 id="section2-5-15"><code>public void OnThinkPost(...)</code>：每帧更新玩家资源</h4>
+            <p>这个函数在游戏每一帧逻辑处理之后运行，用于更新玩家的排位、队友颜色和准星代码等可视化数据。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnThinkPost(int iEnt)
+{
+	// 将每个玩家的预设排位数据写入到CCSPlayerResource实体中，以便客户端可见
+	SetEntDataArray(iEnt, g_iProfileRankOffset, g_iProfileRank, MAXPLAYERS + 1);
+	// 将每个玩家的预设队友颜色数据写入到CCSPlayerResource实体中
+	SetEntDataArray(iEnt, g_iPlayerColorOffset, g_iPlayerColor, MAXPLAYERS + 1);
+
+	for (int i = 1; i <= MaxClients; i++)
+		if (IsValidClient(i) && IsFakeClient(i))
+			SetCrosshairCode(GetEntityAddress(iEnt), i, g_szCrosshairCode[i]); // 设置BOT的准星代码
+}</code></pre>
+            </details>
+            <p>这个函数非常巧妙，它通过修改所有玩家共用的 <code>CCSPlayerResource</code> 实体的数据，来间接实现了为每个 BOT 显示自定义的排位、队友颜色和准星效果。这些都是玩家客户端会读取来显示在记分板和游戏 HUD 上的信息。</p>
+
+            <h4 id="section2-5-16"><code>public Action CS_OnBuyCommand(...)</code>：改变 BOT 购买武器的逻辑</h4>
+            <p>这个钩子允许插件修改 BOT 执行购买命令时的实际行为，例如强制他们购买特定武器的改版或升级。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public Action CS_OnBuyCommand(int client, const char[] szWeapon)
+{
+	if (IsValidClient(client) && IsFakeClient(client) && IsPlayerAlive(client))
+	{
+		// 投掷物和护甲跳过，它们有独立的购买逻辑
+		if (strcmp(szWeapon, "molotov") == 0 || /* ... */ || strcmp(szWeapon, "defuser") == 0)
+			return Plugin_Continue;
+		// 如果BOT已经有主武器，且不是手枪，则阻止他们再次购买主武器（避免重复购买）
+		else if (GetPlayerWeaponSlot(client, CS_SLOT_PRIMARY) != -1 && (strcmp(szWeapon, "galilar") == 0 || /* ... */))
+			return Plugin_Handled; // 阻止这次购买
+		
+		int iAccount = GetEntProp(client, Prop_Send, "m_iAccount"); // 获取BOT金钱
+		
+		if (strcmp(szWeapon, "m4a1") == 0)
+		{
+			// 如果BOT被设置为使用M4A1-S且钱够，强制购买M4A1-S
+			if (g_bUseM4A1S[client] && iAccount >= CS_GetWeaponPrice(client, CSWeapon_M4A1_SILENCER))
+			{
+				AddMoney(client, -CS_GetWeaponPrice(client, CSWeapon_M4A1_SILENCER), true, true, "weapon_m4a1_silencer"); // 扣钱
+				CSGO_ReplaceWeapon(client, CS_SLOT_PRIMARY, "weapon_m4a1_silencer"); // 给予M4A1-S
+				return Plugin_Changed; // 改变了原有行为
+			}
+			// 5%几率购买AUG
+			if (IsItMyChance(5.0) && iAccount >= CS_GetWeaponPrice(client, CSWeapon_AUG)) { /* ... */ }
+		}
+		// 类似逻辑处理Mac10、MP9、Tec9/FiveSeven等武器，根据随机或配置强制购买升级版或替换武器
+	}
+	return Plugin_Continue;
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>武器替换</strong>：当 BOT 尝试购买某些基础武器（如 M4A4、P2000、Tec-9）时，插件会根据之前随机存储的偏好（<code>g_bUseM4A1S</code>, <code>g_bUseUSP</code>, <code>g_bUseCZ75</code>）以及经济状况，强制他们购买对应的升级版本（如 M4A1-S、USP-S、CZ75）。</li>
+                <li><strong>避免重复购买</strong>：如果 BOT 已经有主武器，则阻止他们再次购买主武器。</li>
+            </ul>
+
+            <h4 id="section2-5-17">BOT 底层行为 Detours (动态钩子)</h4>
+            <p>这些函数是利用 <code>dhooks</code> 扩展实现的高级功能，它们绕过了 SourceMod 的标准钩子，直接修改了游戏内部 BOT AI 模块的 C++ 函数行为。这提供了对 BOT 行为最直接、最细致的控制。</p>
+            <ul>
+                <li><code>public MRESReturn BotCOS(...)</code> 和 <code>public MRESReturn BotSIN(...)</code>:
+                    <details>
+                        <summary>点击展开代码</summary>
+                        <pre><code class="language-sourcepawn">public MRESReturn BotCOS(DHookReturn hReturn)
+{
+	hReturn.Value = 0;
+	return MRES_Supercede;
+}
+public MRESReturn BotSIN(DHookReturn hReturn)
+{
+	hReturn.Value = 0;
+	return MRES_Supercede;
+}</code></pre>
+                    </details>
+                    <p>这两个函数可能是劫持了游戏内部 BOT 计算视野（Cone Of Sight）和听觉（Sound INteraction）相关的函数，并强制返回 0，这可能意味着关闭了 BOT 的部分自然感知能力，转而由插件通过其他方式控制其感知，以实现更定制化的行为（例如“职业BOT”的特定感知）。</p>
+                </li>
+                <li><code>public MRESReturn CCSBot_GetPartPosition(...)</code>：修改 BOT 瞄准部位
+                    <details>
+                        <summary>点击展开代码</summary>
+                        <pre><code class="language-sourcepawn">public MRESReturn CCSBot_GetPartPosition(DHookReturn hReturn, DHookParam hParams)
+{
+	int iPlayer = hParams.Get(1);
+	int iPart = hParams.Get(2);
+	
+	if(iPart == 2) // 如果是头部部位（通常是瞄准目标点）
+	{
+		int iBone = LookupBone(iPlayer, "head_0"); // 查找头部骨骼ID
+		if (iBone < 0) return MRES_Ignored;
+		
+		float fHead[3], fBad[3];
+		GetBonePosition(iPlayer, iBone, fHead, fBad); // 获取头部骨骼位置
+		
+		fHead[2] += 4.0; // 微调头部高度
+		
+		hReturn.SetVector(fHead); // 返回调整后的头部位置作为瞄准目标
+		return MRES_Override; // 覆盖原始函数行为
+	}
+	return MRES_Ignored; // 未处理的部位，忽略
+}</code></pre>
+                    </details>
+                    <p>这个函数劫持了 BOT 获取身体部位位置的函数。当 BOT 尝试获取目标头部位置时，插件会稍微调整这个位置（向上抬高一点），这可能是为了微调 BOT 的爆头率，让它们的瞄准更精确。</p>
+                </li>
+                <li><code>public MRESReturn CCSBot_SetLookAt(...)</code>：修改 BOT 的“看”行为
+                    <details>
+                        <summary>点击展开代码</summary>
+                        <pre><code class="language-sourcepawn">public MRESReturn CCSBot_SetLookAt(int client, DHookParam hParams)
+{
+	char szDesc[64];
+	DHookGetParamString(hParams, 1, szDesc, sizeof(szDesc)); // 获取BOT看向的描述
+	
+	if (strcmp(szDesc, "Defuse bomb") == 0 || strcmp(szDesc, "Use entity") == 0 || strcmp(szDesc, "Open door") == 0 || strcmp(szDesc, "Hostage") == 0)
+		return MRES_Ignored; // 这些情况（拆弹、使用实体等）不干预
+	else if (strcmp(szDesc, "Avoid Flashbang") == 0) // 避免闪光弹
+	{
+		DHookSetParam(hParams, 3, PRIORITY_HIGH); // 将优先级设为高
+		return MRES_ChangedHandled; // 处理并改变参数
+	}
+	else if (strcmp(szDesc, "Blind") == 0 || strcmp(szDesc, "Face outward") == 0) // 被闪白或面向外（逃离）
+		return MRES_Supercede; // 完全覆盖，不做任何事
+	else if (strcmp(szDesc, "Breakable") == 0 || strcmp(szDesc, "Plant bomb on floor") == 0) // 打易碎物或下包
+	{
+		g_bDontSwitch[client] = true; // BOT不切换武器
+		CreateTimer(5.0, Timer_EnableSwitch, GetClientUserId(client)); // 5秒后可以切换
+		return strcmp(szDesc, "Plant bomb on floor") == 0 ? MRES_Supercede : MRES_Ignored; // 下包时完全覆盖
+	}
+	else if(strcmp(szDesc, "GrenadeThrowBend") == 0) // 曲线投掷手雷
+	{
+        // 调整投掷物目标点，让投掷物可以绕过障碍物
+		// ... 调用BotBendLineOfSight
+		return MRES_ChangedHandled;
+	}
+	else if(strcmp(szDesc, "Noise") == 0) // 听到噪音
+	{
+        // 随机判断是否直接看向噪音源或扔手雷，并可能停止BOT模仿
+        // ... 调用ProcessGrenadeThrow
+        // ... 设置BOT不切换武器
+		return MRES_ChangedHandled;
+	}
+	else if(strcmp(szDesc, "Nearby enemy gunfire") == 0) // 听到附近敌人枪声
+	{
+        // 随机判断是否扔手雷到枪声方向
+        // ... 调用ProcessGrenadeThrow
+		return MRES_ChangedHandled;
+	}
+	else // 其他所有看向行为
+	{
+		float fPos[3];
+		DHookGetParamVector(hParams, 2, fPos);
+		fPos[2] += 25.0; // 将看向点抬高25单位（可能为了防止看地板）
+		DHookSetParamVector(hParams, 2, fPos);
+		return MRES_ChangedHandled;
+	}
+}</code></pre>
+                    </details>
+                    <p>这个函数劫持了 BOT 看向某个点的逻辑。它允许插件在 BOT 执行各种“看”的行为时进行干预：</p>
+                    <ul>
+                        <li><strong>闪光弹规避</strong>：遇到闪光弹时，BOT 会以更高的优先级避开。</li>
+                        <li><strong>下包和打易碎物</strong>：在下包或攻击易碎物时，阻止 BOT 切换武器，确保动作的连贯性。</li>
+                        <li><strong>投掷物决策</strong>：当 BOT 听到噪音或敌人枪声时，插件可以随机决定让 BOT 投掷手雷到那个方向，增加了 BOT 的策略性。</li>
+                        <li><strong>瞄准微调</strong>：对所有其他“看向”行为，插件会将目标点略微抬高，改善 BOT 的瞄准精度和视角。</li>
+                    </ul>
+                </li>
+                <li><code>public MRESReturn CCSBot_PickNewAimSpot(...)</code>：修改 BOT 瞄准目标点选择
+                    <details>
+                        <summary>点击展开代码</summary>
+                        <pre><code class="language-sourcepawn">public MRESReturn CCSBot_PickNewAimSpot(int client, DHookParam hParams)
+{
+	if (g_bIsProBot[client]) // 仅对“职业BOT”生效
+	{
+		SelectBestTargetPos(client, g_fTargetPos[client]); // 调用自定义函数选择最佳瞄准目标点
+		
+		if (!IsValidClient(g_iTarget[client]) || !IsPlayerAlive(g_iTarget[client]) || g_fTargetPos[client][2] == 0)
+			return MRES_Ignored; // 如果没有有效目标，忽略
+		
+		SetEntDataVector(client, g_iBotTargetSpotOffset, g_fTargetPos[client]); // 将选择的最佳目标点写入BOT内部属性
+	}
+	return MRES_Ignored; // 非职业BOT不干预
+}</code></pre>
+                    </details>
+                    <p>这个函数劫持了 BOT 选择新瞄准点（目标）的逻辑。它只对“职业 BOT”生效，让这些 BOT 使用插件自定义的 <code>SelectBestTargetPos</code> 函数来智能选择是瞄准敌人的头部还是上半身，从而提高他们的决策和击杀效率。</p>
+                </li>
+            </ul>
+
+            <h4 id="section2-5-18"><code>public Action OnPlayerRunCmd(...)</code>：每帧执行的核心逻辑</h4>
+            <p>这个函数在每个玩家（包括 BOT）每帧执行命令时被调用。它是插件中处理 BOT 步法、瞄准、开火、投掷物和拾取武器等核心行为的“大脑”。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public Action OnPlayerRunCmd(int client, int &amp;iButtons, int &amp;iImpulse, float fVel[3], float fAngles[3], int &amp;iWeapon, int &amp;iSubtype, int &amp;iCmdNum, int &amp;iTickCount, int &amp;iSeed, int iMouse[2])
+{
+	g_bBombPlanted = !!GameRules_GetProp("m_bBombPlanted"); // 更新炸弹是否安放状态
+
+	if (IsValidClient(client) && IsPlayerAlive(client) && IsFakeClient(client)) // 确保是活着的有效BOT
+	{
+		if(!g_bFreezetimeEnd && g_bDropWeapon[client] && view_as&lt;LookAtSpotState>(GetEntData(client, g_iBotLookAtSpotStateOffset)) == LOOK_AT_SPOT)
+		{
+            // 如果BOT被标记为掉枪，且正在看目标，则执行掉枪并购买上次的武器
+			CS_DropWeapon(client, GetPlayerWeaponSlot(client, CS_SLOT_PRIMARY), true);
+			FakeClientCommand(client, "buy %s", g_szPreviousBuy[client]);
+			g_bDropWeapon[client] = false;
+		}
+		
+		GetClientAbsOrigin(client, g_fBotOrigin[client]); // 获取BOT当前位置
+		g_iActiveWeapon[client] = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"); // 获取BOT当前手持武器
+		// ...
+
+		if(g_bFreezetimeEnd) // 冻结时间结束后才执行以下逻辑
+		{			
+			int iDefIndex = GetEntProp(g_iActiveWeapon[client], Prop_Send, "m_iItemDefinitionIndex");
+			// ... 获取移动速度、当前导航区域等
+			
+			// 如果所有人都死亡 (残局情况)，切换到刀，跑路
+			if ((GetAliveTeamCount(CS_TEAM_T) == 0 || GetAliveTeamCount(CS_TEAM_CT) == 0) && !g_bDontSwitch[client])
+			{
+				SDKCall(g_hSwitchWeaponCall, client, GetPlayerWeaponSlot(client, CS_SLOT_KNIFE), 0);
+				g_bEveryoneDead = true;
+			}
+				
+            // 随机决定是否要去扔预设手雷
+			if(IsItMyChance(0.2) && g_iDoingSmokeNum[client] == -1)
+				g_iDoingSmokeNum[client] = GetNearestGrenade(client);
+			
+			if(GetDisposition(client) == SELF_DEFENSE) // 如果BOT处于自我防卫状态（被动），转为积极交战
+				SetDisposition(client, ENGAGE_AND_INVESTIGATE);
+			
+            // 根据NavMesh区域属性调整BOT的移动模式（走路/跑步）
+			if(g_pCurrArea[client] != INVALID_NAV_AREA) { /* ... */ }
+			
+            // 处理预设手雷投掷逻辑
+			if(g_iDoingSmokeNum[client] != -1 && !BotMimic_IsPlayerMimicing(client))
+			{
+				// 让BOT移动到投掷位置，看向目标，并播放模仿动作
+			}
+			
+            // 实际执行投掷手雷
+			if(g_bThrowGrenade[client] && eItems_GetWeaponSlotByDefIndex(iDefIndex) == CS_SLOT_GRENADE)
+			{
+				BotThrowGrenade(client, g_fNadeTarget[client]);
+				g_fThrowNadeTimestamp[client] = GetGameTime();
+			}
+			
+            // 如果BOT认为自己安全或残局，则停止疾跑
+			if(IsSafe(client) || g_bEveryoneDead)
+				iButtons &= ~IN_SPEED;
+				
+			if (g_bIsProBot[client] && !g_bBombPlanted && GetTask(client) != COLLECT_HOSTAGES && GetTask(client) != RESCUE_HOSTAGES && /* ... */)
+			{
+				float fClientEyes[3];
+				GetClientEyePosition(client, fClientEyes);
+			
+				// “职业BOT”寻找并拾取地图上的主武器和手枪
+				// ... (复杂且重复的GetNearestEntity和BotMoveTo逻辑)
+			}
+			
+			if (g_bIsProBot[client] && GetDisposition(client) != IGNORE_ENEMIES) // “职业BOT”的战斗瞄准与开火逻辑
+			{		
+				g_iTarget[client] = BotGetEnemy(client); // 获取当前目标
+				
+				float fTargetDistance;
+				int iZoomLevel;
+				bool bIsEnemyVisible = !!GetEntData(client, g_iEnemyVisibleOffset); // 敌人是否可见
+				bool bIsHiding = BotIsHiding(client); // 是否在藏身处
+				bool bIsDucking = !!(GetEntityFlags(client) & FL_DUCKING); // 是否在蹲伏
+				bool bIsReloading = IsPlayerReloading(client); // 是否在换弹
+				// ...
+				
+				if(bIsHiding && (iDefIndex == 8 || iDefIndex == 39) && iZoomLevel == 0) //如果是狙击枪且在藏身处，未开镜则开镜
+					iButtons |= IN_ATTACK2;
+				else if(!bIsHiding && (iDefIndex == 8 || iDefIndex == 39) && iZoomLevel == 1) //如果是狙击枪且不在藏身处，开镜则取消开镜
+					iButtons |= IN_ATTACK2;
+				
+				if (bIsHiding && g_bUncrouch[client]) // 如果在藏身处且允许取消蹲伏
+					iButtons &= ~IN_DUCK; // 取消蹲伏
+					
+				if (!IsValidClient(g_iTarget[client]) || !IsPlayerAlive(g_iTarget[client]) || g_fTargetPos[client][2] == 0)
+				{
+					g_iPrevTarget[client] = g_iTarget[client];
+					return Plugin_Continue;
+				}
+
+                // 如果BOT在模仿，停止模仿，确保战斗优先
+				if(BotMimic_IsPlayerMimicing(client)) { /* ... */ }
+				
+                // 如果当前是刀或投掷物，切换到最佳武器
+				if ((eItems_GetWeaponSlotByDefIndex(iDefIndex) == CS_SLOT_KNIFE || eItems_GetWeaponSlotByDefIndex(iDefIndex) == CS_SLOT_GRENADE) && GetTask(client) != ESCAPE_FROM_BOMB && GetTask(client) != ESCAPE_FROM_FLAMES)
+						BotEquipBestWeapon(client, true);
+				
+				if (bIsEnemyVisible && GetEntityMoveType(client) != MOVETYPE_LADDER) // 敌人可见且不在梯子上
+				{
+                    // 设置蹲伏时间戳，用于控制蹲伏频率
+                    // ... 计算目标命中容忍度
+						
+					switch(iDefIndex) // 根据当前武器DefIndex调整开火和停止逻辑
+					{
+						case 7, 8, /* ... 步枪/冲锋枪/散弹枪 */ 60: // 大部分枪
+						{
+                            // 如果瞄准命中且距离近，或者距离远且正在开火，则执行急停
+							if (fOnTarget > fAimTolerance && fTargetDistance < 2000.0 && iDefIndex != 17 /* 狙击枪 */ && iDefIndex != 19 /* AK */ && /* ... */)
+								AutoStop(client, fVel, fAngles);
+							else if (fTargetDistance > 2000.0 && GetEntDataFloat(client, g_iFireWeaponOffset) == GetGameTime())
+								AutoStop(client, fVel, fAngles);
+						
+							if (fOnTarget > fAimTolerance && fTargetDistance < 2000.0) // 瞄准命中且距离近
+							{
+								iButtons &= ~IN_ATTACK; // 先解除攻击按钮
+							
+                                // 如果不在换弹且速度慢或蹲伏，则开火
+								if(!bIsReloading && (fSpeed < 50.0 || bIsDucking || iDefIndex == 17 || iDefIndex == 19 || /* ... */))
+								{
+									iButtons |= IN_ATTACK;
+									SetEntDataFloat(client, g_iFireWeaponOffset, GetGameTime()); // 记录开火时间
+								}
+							}
+						}
+						case 1: // Desert Eagle (沙鹰)
+						{
+                            // 短暂延迟开火后进行急停
+							if (GetGameTime() - GetEntDataFloat(client, g_iFireWeaponOffset) < 0.15 && !bIsDucking && !bIsReloading)
+								AutoStop(client, fVel, fAngles);
+						}
+						case 9, 40: // AWP/SSG08 (狙击枪)
+						{
+                            // 确保开镜、不在换弹、开火冷却结束、且准确瞄准目标后才开火
+							if (fTargetDistance < 2750.0 && !bIsReloading && GetEntProp(client, Prop_Send, "m_bIsScoped") && GetGameTime() - g_fShootTimestamp[client] > 0.4 && GetClientAimTarget(client, true) == g_iTarget[client])
+							{
+								iButtons |= IN_ATTACK;
+								SetEntDataFloat(client, g_iFireWeaponOffset, GetGameTime());
+							}	
+						}
+					}
+					
+					float fClientLoc[3];
+					Array_Copy(g_fBotOrigin[client], fClientLoc, 3);
+					fClientLoc[2] += HalfHumanHeight; // 客户端眼睛高度
+					
+                    // 在有效瞄准目标时（步枪/冲锋枪/散弹枪有效武器DefIndex），有条件进行蹲伏射击
+					if (GetGameTime() >= g_fCrouchTimestamp[client] && !GetEntProp(g_iActiveWeapon[client], Prop_Data, "m_bInReload") && IsPointVisible(fClientLoc, g_fTargetPos[client]) && fOnTarget > fAimTolerance && fTargetDistance < 2000.0 && (iDefIndex == 7 || iDefIndex == 8 || /* ... */ || iDefIndex == 28))
+						iButtons |= IN_DUCK;
+						
+					g_iPrevTarget[client] = g_iTarget[client]; // 记录上一个目标
+				}
+			}
+			return Plugin_Changed; // 告诉游戏我们修改了BOT的命令
+		}
+	}
+	return Plugin_Continue;
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>掉枪执行</strong>：如果 BOT 被标记为需要掉枪，并且正在看向目标，它会实际执行掉枪操作并购买之前指定的武器。</li>
+                <li><strong>残局刀跑</strong>：在残局（双方只剩下一个 BOT 或全部死亡）时，如果 BOT 没有禁用切换武器，它会切刀加速移动。</li>
+                <li><strong>战场适应</strong>：根据当前导航区域的属性（如 <code>NAV_MESH_WALK</code> 或 <code>NAV_MESH_RUN</code>），BOT 会自动调整其移动速度（切换步行或跑步），以更合理地穿越地图。</li>
+                <li><strong>预设投掷物</strong>：BOT 会随机选择并执行预设的投掷物路线，包括移动到投掷位置，看向预设目标，并播放录制好的投掷动作。</li>
+                <li><strong>决策链</strong>：BOT 会根据当前任务、危险程度（<code>IsSafe</code> 函数）、敌人可见性、是否在梯子上等因素，动态调整其行为倾向（<code>DispositionType</code>），并选择最佳武器。</li>
+                <li><strong>狙击枪开镜/关镜</strong>：BOT 会根据自身当前姿态（是否藏身）和狙击枪的开镜状态，智能地进行开镜和关镜操作。</li>
+                <li><strong>瞄准与射击</strong>：这是最复杂的 AI 部分。插件会：
+                    <ul>
+                        <li>检查目标是否可见，并根据距离和瞄准精度（<code>fOnTarget > fAimTolerance</code>）决定是否开火。</li>
+                        <li>对步枪/冲锋枪，在瞄准命中且距离近时，会尝试急停并开火以提高精度。</li>
+                        <li>对狙击枪，会确保开镜、瞄准命中且不在换弹时才开火。</li>
+                        <li><strong>蹲伏射击</strong>：在满足特定条件时（例如瞄准命中、距离适中），会随机让 BOT 进行蹲伏射击，降低自身被弹面积。</li>
+                        <li><strong>武器切换</strong>：如果当前武器是刀或投掷物，且没有特殊任务（如逃跑），BOT 会自动切换到最佳战斗武器。</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h4 id="section2-5-19"><code>public void OnPlayerSpawn(...)</code>：玩家出生动作</h4>
+            <p>当玩家或 BOT 出生时，除了在 <code>OnClientPostAdminCheck</code> 中设置的属性外，还会调整 BOT 的内部 AI 参数和手枪类型。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnPlayerSpawn(Event eEvent, const char[] szName, bool bDontBroadcast)
+{
+	int client = GetClientOfUserId(eEvent.GetInt("userid"));
+	
+	SetPlayerTeammateColor(client); // 设置队友颜色（在地图开始时会设置，这里可能是再次确保）
+
+	if (IsValidClient(client) && IsFakeClient(client))
+	{
+		if(g_bIsProBot[client]) // 如果是“职业BOT”
+		{
+			Address pLocalProfile = view_as&lt;Address>(GetEntData(client, g_iBotProfileOffset)); // 获取BOT的个人资料对象内存地址
+			
+			// 直接通过偏移量修改BOT的内部AI参数：瞄准最大加速度、反应时间、攻击性
+			StoreToAddress(pLocalProfile + view_as&lt;Address>(104), view_as&lt;int>(g_fLookAngleMaxAccel[client]), NumberType_Int32);
+			StoreToAddress(pLocalProfile + view_as&lt;Address>(116), view_as&lt;int>(g_fLookAngleMaxAccel[client]), NumberType_Int32);
+			StoreToAddress(pLocalProfile + view_as&lt;Address>(84), view_as&lt;int>(g_fReactionTime[client]), NumberType_Int32);
+			StoreToAddress(pLocalProfile + view_as&lt;Address>(4), view_as&lt;int>(g_fAggression[client]), NumberType_Int32);
+		}
+		
+		if (g_bUseUSP[client] && GetClientTeam(client) == CS_TEAM_CT) // 如果CT方BOT偏好使用USP-S
+		{
+			char szUSP[32];
+			GetClientWeapon(client, szUSP, sizeof(szUSP));
+			if (strcmp(szUSP, "weapon_hkp2000") == 0) // 如果默认手枪是P2000
+				CSGO_ReplaceWeapon(client, CS_SLOT_SECONDARY, "weapon_usp_silencer"); // 替换为USP-S
+		}
+	}
+}</code></pre>
+            </details>
+            <ul>
+                <li><strong>AI 参数直接修改</strong>：对于“职业 BOT”，插件不是通过游戏控制台变量，而是直接通过内存地址访问并修改 BOT 内部的 AI 参数（如瞄准加速度、反应时间、攻击性），从而实现更精细和强大的 BOT 行为。</li>
+                <li><strong>USP-S 替换</strong>：如果 CT 方 BOT 被随机设定为偏好 USP-S，插件会将其默认的 P2000 替换为 USP-S。</li>
+            </ul>
+
+            <h4 id="section2-5-20"><code>public void BotMimic_OnPlayerStopsMimicing(...)</code>：停止模仿</h4>
+            <p>当 BOT 停止播放模仿动作时，重置其预设投掷物相关的状态。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void BotMimic_OnPlayerStopsMimicing(int client, char[] szName, char[] szCategory, char[] szPath)
+{
+	g_iDoingSmokeNum[client] = -1; // 重置正在进行的烟雾弹投掷编号
+}</code></pre>
+            </details>
+
+            <h4 id="section2-5-21"><code>public void OnClientDisconnect(...)</code>：客户端断开连接</h4>
+            <p>当客户端（包括 BOT）断开连接时，清理 BOT 的排位信息。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void OnClientDisconnect(int client)
+{
+	if (IsValidClient(client) && IsFakeClient(client))
+		g_iProfileRank[client] = 0; // 重置BOT的排位信息
+}</code></pre>
+            </details>
+
+            <h4 id="section2-5-22"><code>public void eItems_OnItemsSynced()</code>：物品同步后</h4>
+            <p>这个函数在 <code>eItems</code> 扩展完全同步游戏物品数据后被调用。这里的作用是强制服务器更换地图，以此触发所有插件的重新加载和初始化，确保 <code>eItems</code> 提供的物品数据在插件启动时能够完全就绪。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void eItems_OnItemsSynced()
+{
+	ServerCommand("changelevel %s", g_szMap); // 强制服务器更换到当前地图，触发全面刷新
+}</code></pre>
+            </details>
+            <p>这是一个小小的“技巧”，确保所有依赖 <code>eItems</code> 数据的插件（包括本插件和上一个 BOT Inventory 插件）都能在数据完整加载后，在一个干净的环境中启动。</p>
+
+            <h3 id="section2-6">2.6 辅助函数：让 BOT 更“聪明”的工具</h3>
+
+            <h4 id="section2-6-1"><code>void ParseMapNades(const char[] szMap)</code>：解析地图投掷物</h4>
+            <p>这个函数负责从配置文件 <code>configs/bot_nades.txt</code> 中读取特定地图的预设投掷物信息。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">void ParseMapNades(const char[] szMap)
+{
+	char szPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, szPath, sizeof(szPath), "configs/bot_nades.txt"); // 构建配置文件路径
+	
+	if (!FileExists(szPath)) { /* ... */ return; } // 文件不存在报错
+	
+	KeyValues kv = new KeyValues("Nades"); // 创建KeyValues对象
+	if (!kv.ImportFromFile(szPath)) { /* ... */ return; } // 载入文件失败报错
+	
+	if(!kv.JumpToKey(szMap)) { /* ... */ return; } // 跳到当前地图的配置段
+	if(!kv.GotoFirstSubKey()) { /* ... */ return; } // 跳到第一个投掷物配置
+	
+	int i = 0;
+	do
+	{
+		// 读取投掷物的位置、看向点、物品DefIndex、回放文件路径、冷却时间戳、所属队伍
+		kv.GetVector("position", g_fNadePos[i]);
+		kv.GetVector("lookat", g_fNadeLook[i]);
+		g_iNadeDefIndex[i] = kv.GetNum("nadedefindex");
+		kv.GetString("replay", g_szReplay[i], 128);
+		g_fNadeTimestamp[i] = kv.GetFloat("timestamp");
+		// ... 判断队伍
+		i++;
+	} while (kv.GotoNextKey()); // 遍历所有投掷物配置
+	
+	delete kv;	
+	g_iMaxNades = i; // 记录投掷物数量
+}</code></pre>
+            </details>
+            <p>这个函数是 BOT 能够精确投掷预设投掷物的基础。它读取的 <code>bot_nades.txt</code> 文件需要管理员手动配置，指明每个烟雾、火等的投掷点、目标点以及相关的 BOT 模仿回放文件。</p>
+
+            <h4 id="section2-6-2"><code>bool IsProBot(...)</code>：判断是否是“职业BOT”</h4>
+            <p>检查 BOT 的名字是否在 <code>data/bot_info.json</code> 中。如果是，则读取其对应的准星代码。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">bool IsProBot(const char[] szName, char[] szCrosshairCode, int iSize)
+{
+	char szPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, szPath, sizeof(szPath), "data/bot_info.json"); // 构建配置文件路径
+	
+	if (!FileExists(szPath)) { /* ... */ return false; } // 文件不存在报错
+	
+	JSONObject jData = JSONObject.FromFile(szPath); // 从JSON文件读取数据
+	if(jData.HasKey(szName)) // 检查JSON中是否有该BOT的名字
+	{
+		JSONObject jInfoObj = view_as&lt;JSONObject>(jData.Get(szName));
+		jInfoObj.GetString("crosshair_code", szCrosshairCode, iSize); // 读取准星代码
+		delete jInfoObj;
+		delete jData;
+		return true; // 是职业BOT
+	}
+	
+	delete jData;
+	return false; // 不是职业BOT
+}</code></pre>
+            </details>
+            <p>这个函数让你能够为特定名字的 BOT 设置独特的行为和准星，比如名为“s1mple”的 BOT 可以拥有 s1mple 的准星和更强的 AI 属性。</p>
+
+            <h4 id="section2-6-3"><code>void LoadSDK()</code>：加载 SDK 函数地址和偏移量</h4>
+            <p>这个函数通过读取 <code>botstuff.games</code> 配置文件（通常由 SourceHook 或其他工具生成），来获取游戏内部 C++ 函数（如 BOT 移动、瞄准、骨骼查找等）在内存中的地址和 BOT 对象的属性偏移量。这是实现高级 BOT AI 最底层的技术。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void LoadSDK()
+{
+	GameData hGameConfig = new GameData("botstuff.games"); // 载入游戏数据配置文件
+	if (hGameConfig == null) { /* ... */ }
+	
+	// 获取BOT管理器TheBots的全局地址
+	if(!(g_pTheBots = hGameConfig.GetAddress("TheBots"))) { /* ... */ }
+	
+	// 获取一系列CCSBot（BOT核心AI对象）内部属性的偏移量
+	if ((g_iBotTargetSpotOffset = hGameConfig.GetOffset("CCSBot::m_targetSpot")) == -1) { /* ... */ }
+	// ... (省略了大量类似的代码，每行都在获取一个BOT内部属性的偏移量)
+	
+	// 准备SDK调用，获取游戏内部C++函数的句柄
+	StartPrepSDKCall(SDKCall_Player); // 准备对玩家实体进行SDK调用
+	PrepSDKCall_SetFromConf(hGameConfig, SDKConf_Signature, "CCSBot::MoveTo"); // 设置要调用的函数签名
+	// ... (添加函数参数和返回信息)
+	if ((g_hBotMoveTo = EndPrepSDKCall()) == null) { /* ... */ } // 获取函数句柄
+	
+	// ... (省略了大量类似的代码，为LookupBone, GetBonePosition, BotIsVisible等获取函数句柄)
+	
+	delete hGameConfig;
+}</code></pre>
+            </details>
+            <p>如果你不进行游戏引擎的逆向工程，你不需要完全理解这些偏移量和签名的含义。你只需要知道，它们是插件能够直接告诉游戏“做某事”（例如“让 BOT 移动到哪里”、“让 BOT 看向哪里”）以及“获取某信息”（例如“BOT 的目标位置是什么”）的关键。这个文件 <code>botstuff.games</code> 通常需要额外下载或根据你的服务器游戏版本生成。</p>
+
+            <h4 id="section2-6-4"><code>void LoadDetours()</code>：加载动态钩子 (Detours)</h4>
+            <p>这个函数负责设置动态钩子（Detours），它比标准 SDK 钩子更强大，允许插件在游戏内部的 C++ 函数执行前或执行后插入自己的代码，甚至完全替换原函数的功能。这对于彻底改变 BOT 的核心 AI 行为至关重要。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public void LoadDetours()
+{
+	GameData hGameData = new GameData("botstuff.games"); // 再次载入游戏数据配置文件
+	if (hGameData == null) { /* ... */ return; }
+	
+	// 设置CCSBot::SetLookAt函数的Detour
+	DynamicDetour hBotSetLookAtDetour = DynamicDetour.FromConf(hGameData, "CCSBot::SetLookAt");
+	if(!hBotSetLookAtDetour.Enable(Hook_Pre, CCSBot_SetLookAt)) // 在原函数执行前钩子CCSBot_SetLookAt函数
+		SetFailState("Failed to setup detour for CCSBot::SetLookAt");
+	
+	// 设置CCSBot::PickNewAimSpot函数的Detour
+	DynamicDetour hBotPickNewAimSpotDetour = DynamicDetour.FromConf(hGameData, "CCSBot::PickNewAimSpot");
+	if(!hBotPickNewAimSpotDetour.Enable(Hook_Post, CCSBot_PickNewAimSpot)) // 在原函数执行后钩子CCSBot_PickNewAimSpot函数
+		SetFailState("Failed to setup detour for CCSBot::PickNewAimSpot");
+	
+	// 设置BotCOS、BotSIN、CCSBot::GetPartPosition函数的Detour
+	// ... (类似的代码，钩子了上面提到过的BotCOS, BotSIN, GetPartPosition)
+	
+	delete hGameData;
+}</code></pre>
+            </details>
+            <p>通过这些 Detours，插件能够“劫持”游戏内部 BOT AI 的关键决策函数，例如 BOT 决定看向哪里、选择哪个瞄准点、甚至底层的感知方式。然后，插件运行自己定制的逻辑来替代或补充原有的游戏 AI 行为，从而实现高度定制化的 BOT 智能。</p>
+
+            <h4 id="section2-6-5">SDK Wrapper 函数：简化调用</h4>
+            <p>这些函数是对前面通过 <code>LoadSDK()</code> 获取的句柄的封装。它们让插件开发人员能够像调用普通函数一样，轻松地调用游戏内部的 C++ 函数。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">public int LookupBone(int iEntity, const char[] szName) { /* ... */ } // 查找实体骨骼ID
+public void GetBonePosition(int iEntity, int iBone, float fOrigin[3], float fAngles[3]) { /* ... */ } // 获取骨骼位置
+public void BotMoveTo(int client, float fOrigin[3], RouteType routeType) { /* ... */ } // 让BOT移动到指定位置
+public bool BotIsVisible(int client, float fPos[3], bool bTestFOV, int iIgnore = -1) { /* ... */ } // BOT是否能看到某点
+public bool BotIsHiding(int client) { /* ... */ } // BOT是否在藏身处
+public void BotEquipBestWeapon(int client, bool bMustEquip) { /* ... */ } // 让BOT装备最佳武器
+public void BotSetLookAt(int client, const char[] szDesc, const float fPos[3], PriorityType pri, float fDuration, bool bClearIfClose, float fAngleTolerance, bool bAttack) { /* ... */ } // 让BOT看向指定位置
+public bool BotBendLineOfSight(int client, const float fEye[3], const float fTarget[3], float fBend[3], float fAngleLimit) { /* ... */ } // 让BOT的视线绕过障碍物
+public void BotThrowGrenade(int client, const float fTarget[3]) { /* ... */ } // 让BOT投掷手雷
+public int BotGetEnemy(int client) { /* ... */ } // 获取BOT当前锁定的敌人
+public void SetCrosshairCode(Address pCCSPlayerResource, int client, const char[] szCode) { /* ... */ } // 设置准星代码
+public void AddMoney(int client, int iAmount, bool bTrackChange, bool bItemBought, const char[] szItemName) { /* ... */ } // 给玩家增减金钱</code></pre>
+            </details>
+            <p>这些辅助函数大大简化了代码，使得在插件内部调用复杂的游戏引擎函数变得像普通函数调用一样简单，提高了代码的可读性和开发效率。</p>
+
+            <h4 id="section2-6-6">其他实用辅助函数</h4>
+            <p>这些是插件中用于各种判断、计算和操作的通用函数。</p>
+            <details>
+                <summary>点击展开代码</summary>
+                <pre><code class="language-sourcepawn">bool IsDefaultPistol(const char[] szWeapon) { /* ... */ } // 判断是否是默认手枪（P2000/USP-S/Glock）
+int GetFriendsWithPrimary(int client) { /* ... */ } // 计算同一队伍中有主武器的队友数量
+public int GetNearestGrenade(int client) { /* ... */ } // 找到距离BOT最近的未使用的预设投掷物
+stock int GetNearestEntity(int client, char[] szClassname) { /* ... */ } // 找到距离BOT最近的某个类名的实体（如武器）
+stock int CSGO_ReplaceWeapon(int client, int iSlot, const char[] szClass) { /* ... */ } // 替换玩家武器槽位中的武器
+bool IsPlayerReloading(int client) { /* ... */ } // 判断玩家是否正在换弹
+public void BeginQuickSwitch(int client) { /* ... */ } // 开始狙击枪快切
+public void FinishQuickSwitch(int client) { /* ... */ } // 完成狙击枪快切
+public Action Timer_EnableSwitch(Handle hTimer, any client) { /* ... */ } // 定时器，用于解除BOT的武器切换限制
+public Action Timer_DontForceThrow(Handle hTimer, any client) { /* ... */ } // 定时器，用于解除BOT的强制投掷物状态
+public void DelayThrow(any client) { /* ... */ } // 延迟投掷手雷的辅助函数
+public void SelectBestTargetPos(int client, float fTargetPos[3]) { /* ... */ } // 选择最佳瞄准目标点（头部或身体）
+stock void GetViewVector(float fVecAngle[3], float fOutPut[3]) { /* ... */ } // 将角度转换为方向向量
+stock float AngleNormalize(float fAngle) { /* ... */ } // 规范化角度到-180到180度之间
+stock bool IsPointVisible(float fStart[3], float fEnd[3]) { /* ... */ } // 判断两点之间是否可见（无障碍物）
+public bool TraceEntityFilterStuff(int iEntity, int iMask) { /* ... */ } // 射线追踪的实体过滤回调
+public void ProcessGrenadeThrow(int client, float fTarget[3]) { /* ... */ } // 处理BOT手雷投掷的完整流程
+stock bool GetGrenadeToss(int client, float fTossTarget[3]) { /* ... */ } // 计算手雷投掷的最佳抛物线
+stock bool LineGoesThroughSmoke(float fFrom[3], float fTo[3]) { /* ... */ } // 判断两点之间是否有烟雾阻挡
+stock int GetAliveTeamCount(int iTeam) { /* ... */ } // 计算队伍中存活的玩家数量
+stock bool IsSafe(int client) { /* ... */ } // 判断BOT是否处于“安全”状态（冻结时间结束后一段时间内）
+stock TaskType GetTask(int client) { /* ... */ } // 获取BOT当前任务
+stock DispositionType GetDisposition(int client) { /* ... */ } // 获取BOT当前行为倾向
+stock void SetDisposition(int client, DispositionType iDisposition) { /* ... */ } // 设置BOT行为倾向
+stock void SetPlayerTeammateColor(int client) { /* ... */ } // 设置玩家的队友颜色
+public void AutoStop(int client, float fVel[3], float fAngles[3]) { /* ... */ } // 模拟玩家急停动作
+stock bool ShouldForce() { /* ... */ } // 判断是否处于关键局（半场、赛点、加时）
+stock int GetNumWinsToClinch() { /* ... */ } // 获取胜利所需的回合数
+stock bool IsItMyChance(float fChance = 0.0) { /* ... */ } // 根据几率判断是否发生某事
+stock bool IsValidClient(int client) { /* ... */ } // 判断客户端是否有效</code></pre>
+            </details>
+            <ul>
+                <li><strong>武器判断与替换</strong>：判断武器类型，并实现武器掉落和替换功能。</li>
+                <li><strong>瞄准与射击辅助</strong>：包括选择最佳瞄准点（头部或身体）、进行急停来提高射击精度等。</li>
+                <li><strong>手雷投掷计算</strong>：复杂但精妙的 <code>GetGrenadeToss</code> 函数，计算出最佳的抛物线投掷角度，让 BOT 的手雷投掷更加智能和有效。</li>
+                <li><strong>游戏状态判断</strong>：判断 BOT 是否“安全”（在冻结时间结束后的无敌人阶段），以及当前游戏处于哪个阶段（热身、半场、赛点）。</li>
+                <li><strong>几率计算</strong>：<code>IsItMyChance</code> 是一个常用的小工具，让插件能够以设定的几率随机触发某些行为，增加 BOT 行为的多样性。</li>
+            </ul>
+
+            <p class="author-info" style="margin-top: 50px;">
+                这份文档由 un1 创作，并由 Gemini 提供技术辅助。<br>
+                希望这份详细的解析能帮助你更好地理解这个 SourcePawn 插件，让你的 CS:GO BOT 变得更加强大和智能！
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle Logic
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                htmlElement.classList.add('dark-mode');
+                themeToggle.textContent = '切换深色';
+            } else {
+                htmlElement.classList.remove('dark-mode');
+                themeToggle.textContent = '切换浅色';
+            }
+        }
+
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        applyTheme(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            let currentTheme = htmlElement.classList.contains('dark-mode') ? 'dark' : 'light';
+            let newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Dynamic Table of Contents (TOC) Generation
+        const tocContainer = document.getElementById('table-of-contents');
+        const contentContainer = document.querySelector('.container');
+        const headers = contentContainer.querySelectorAll('h2, h3, h4');
+        const observerOptions = {
+            root: null, // viewport
+            rootMargin: '0px 0px -50% 0px', // When 50% of the element is visible
+            threshold: 0 // Intersection ratio
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const id = entry.target.id;
+                const tocLink = tocContainer.querySelector(`a[href="#${id}"]`);
+
+                if (tocLink) {
+                    if (entry.isIntersecting) {
+                        // Remove active class from all other links
+                        tocContainer.querySelectorAll('a').forEach(link => link.classList.remove('active'));
+                        // Add active class to the current link
+                        tocLink.classList.add('active');
+                    } else {
+                        // Simple logic: if leaving, remove active.
+                        // For more complex, might need to check direction.
+                        // tocLink.classList.remove('active');
+                    }
+                }
+            });
+        }, observerOptions);
+
+        headers.forEach((header, index) => {
+            // Ensure headers have an ID
+            if (!header.id) {
+                header.id = `section-${header.tagName.toLowerCase()}-${index}`;
+            }
+
+            const listItem = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = `#${header.id}`;
+            link.textContent = header.textContent;
+
+            // Add classes for nesting in TOC
+            if (header.tagName === 'H3') {
+                listItem.classList.add('level-3');
+                listItem.style.marginLeft = '15px';
+            } else if (header.tagName === 'H4') {
+                listItem.classList.add('level-4');
+                listItem.style.marginLeft = '30px';
+            }
+
+            listItem.appendChild(link);
+            tocContainer.appendChild(listItem);
+
+            observer.observe(header); // Observe each header
+        });
+
+        // Set initial active link on page load
+        if (headers.length > 0) {
+            const firstHeaderId = headers[0].id;
+            const firstTocLink = tocContainer.querySelector(`a[href="#${firstHeaderId}"]`);
+            if (firstTocLink) {
+                firstTocLink.classList.add('active');
+            }
+        }
+
+    </script>
+</body>
+</html>

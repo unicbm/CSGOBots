@@ -5,144 +5,237 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSGOBots - 内容导航</title>
     <style>
+        /* 莫兰迪配色方案 - 浅色模式（默认）*/
+        :root {
+            --primary-text-color: #495057; /* 主要文本颜色 */
+            --background-color: #F0F2F5; /* 外部背景色 */
+            --container-bg: #FFFFFF; /* 内容容器背景色 */
+            --header-color: #6A8EAE; /* 标题颜色 */
+            --border-color: #CBD2D8; /* 分隔线和边框颜色 */
+            --link-color: #B29DA3; /* 普通链接颜色 */
+            --link-hover-bg: #E0E7EB; /* 链接悬停背景色 */
+            --link-hover-text: var(--header-color); /* 链接悬停文本颜色 */
+            --description-color: #777; /* 描述文本颜色 */
+            --avatar-frame-bg: #004d7a; /* 头像框背景色 */
+            --visit-counter-color: #666; /* 访问计数器颜色 */
+            --visit-strong-color: #007bb5; /* 访问计数器数字颜色 */
+            --footer-text-color: #777; /* 页脚文本颜色 */
+            --footer-strong-color: #555; /* 页脚强调文本颜色 */
+            --theme-button-bg: #6A8EAE; /* 主题切换按钮背景 */
+            --theme-button-text: white; /* 主题切换按钮文本 */
+        }
+
+        /* 深色模式 */
+        .dark-mode {
+            --primary-text-color: #E2E2E2;
+            --background-color: #282C34;
+            --container-bg: #3C424E;
+            --header-color: #B4C6D4;
+            --border-color: #555B6E;
+            --link-color: #9C8998;
+            --link-hover-bg: #4A505D;
+            --link-hover-text: var(--header-color);
+            --description-color: #BBB;
+            --avatar-frame-bg: #003657;
+            --visit-counter-color: #AAA;
+            --visit-strong-color: #5a9cb8;
+            --footer-text-color: #A9A9A9;
+            --footer-strong-color: #CCC;
+            --theme-button-bg: #555B6E;
+            --theme-button-text: #E2E2E2;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 40px; /* 整体内容的内边距 */
+            padding: 40px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #e0eff1 0%, #d4e7f3 100%);
-            color: #333;
+            background-color: var(--background-color);
+            color: var(--primary-text-color);
             line-height: 1.6;
-            position: relative; /* 为头像的绝对定位提供参考 */
+            position: relative;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         
-        /* 左上角头像 - 现为纯色 */
+        /* 左上角头像 */
         .avatar-frame {
-            position: absolute; /* 绝对定位 */
-            top: 30px; /* 距离顶部 */
-            left: 30px; /* 距离左侧 */
-            width: 90px; /* 头像框宽度 */
-            height: 90px; /* 头像框高度 */
-            border-radius: 50%; /* 变成圆形 */
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* 阴影效果 */
-            border: 4px solid #fff; /* 白色边框，增强高级感 */
-            z-index: 100; /* 确保在最上层 */
-            background-color: #004d7a; /* 高级的蓝色纯色 */
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border: 4px solid var(--container-bg); /* 和内容容器背景色一致的边框 */
+            z-index: 100;
+            background-color: var(--avatar-frame-bg);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* 主题切换按钮 */
+        .theme-switch {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            z-index: 100;
+        }
+        .theme-switch button {
+            background-color: var(--theme-button-bg);
+            color: var(--theme-button-text);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .theme-switch button:hover {
+            opacity: 0.9;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
         .container {
-            background-color: #ffffff;
+            background-color: var(--container-bg);
             padding: 40px 60px;
             border-radius: 12px;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            text-align: center;
+            text-align: center; /* 标题和介绍居中 */
             max-width: 800px;
             width: 90%;
-            position: relative; /* 确保内容在头像之下 */
-            z-index: 1; /* 比头像低一点，确保头像在最上层 */
+            position: relative;
+            z-index: 1;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
         h1 {
-            color: #2c3e50;
+            color: var(--header-color);
             margin-bottom: 25px;
             font-size: 2.8em;
             letter-spacing: 1px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+            transition: color 0.3s ease;
         }
         h2 {
-            color: #34495e;
+            color: var(--header-color);
             margin-top: 35px;
             margin-bottom: 20px;
             font-size: 1.8em;
-            border-bottom: 2px solid #aecde2;
+            border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
-            display: inline-block;
+            display: inline-block; /* 让下划线只包裹文本 */
+            transition: color 0.3s ease, border-color 0.3s ease;
         }
         p {
             font-size: 1.15em;
             margin-bottom: 30px;
-            color: #555;
+            color: var(--primary-text-color);
+            transition: color 0.3s ease;
         }
         nav ul {
             list-style: none;
             padding: 0;
             margin: 0;
-            text-align: left;
+            text-align: left; /* 目录列表左对齐 */
         }
         nav li {
-            margin-bottom: 18px;
-            position: relative;
+            margin-bottom: 15px; /* 列表项间距 */
         }
-        nav li ul {
-            margin-top: 10px;
-            margin-left: 30px;
-            border-left: 2px solid #e0e0e0;
-            padding-left: 15px;
-        }
-        nav li ul li {
-            margin-bottom: 10px;
-        }
-        a {
+        /* 一级目录链接 */
+        nav > ul > li > a {
             text-decoration: none;
-            color: #007bb5;
+            color: var(--link-color); /* 主链接颜色 */
             font-size: 1.25em;
             font-weight: bold;
-            padding: 12px 25px;
-            border: 2px solid #007bb5;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            display: inline-block;
-            min-width: 250px;
-            text-align: center;
-            box-sizing: border-box;
+            padding: 8px 15px; /* 增加点击区域 */
+            display: block; /* 占据整行，方便点击和高亮 */
+            border-radius: 5px; /* 略带圆角 */
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
-        a:hover {
-            background-color: #007bb5;
-            color: white;
-            box-shadow: 0 5px 15px rgba(0, 123, 181, 0.4);
-            transform: translateY(-2px);
+        nav > ul > li > a:hover {
+            background-color: var(--link-hover-bg);
+            color: var(--link-hover-text);
         }
 
-        /* 针对子菜单链接的样式微调 */
-        nav li ul li a {
-            font-size: 1.1em;
-            padding: 8px 15px;
-            min-width: unset;
-            border-color: #6facdb;
-            color: #4a6fa8;
+        /* 描述文字样式 */
+        nav p {
+            font-size: 0.9em;
+            color: var(--description-color);
+            margin-top: 5px;
+            margin-bottom: 0; /* 修正为0，让描述紧跟链接 */
+            padding-left: 15px; /* 与链接对齐 */
+            line-height: 1.4;
+            transition: color 0.3s ease;
         }
-        nav li ul li a:hover {
-            background-color: #6facdb;
-            color: white;
-            box-shadow: 0 2px 8px rgba(111, 172, 219, 0.3);
+
+        /* 二级目录 (sub-menu) */
+        nav li ul.sub-menu {
+            list-style: none;
+            margin-top: 10px;
+            margin-left: 30px; /* 缩进 */
+            border-left: 2px solid var(--border-color); /* 左侧指示线 */
+            padding-left: 15px;
+            transition: border-color 0.3s ease;
+        }
+        nav li ul.sub-menu > li > a {
+            font-size: 1.1em; /* 略小 */
+            padding: 6px 12px;
+            color: var(--primary-text-color); /* 二级链接颜色 */
+        }
+        nav li ul.sub-menu > li > a:hover {
+             background-color: var(--link-hover-bg);
+             color: var(--link-hover-text);
+        }
+
+        /* 三级目录 (sub-sub-menu) */
+        nav li ul.sub-menu ul.sub-sub-menu {
+            list-style: none;
+            margin-top: 8px;
+            margin-left: 30px; /* 进一步缩进 */
+            border-left: 2px solid var(--border-color); /* 左侧指示线 */
+            padding-left: 15px;
+            transition: border-color 0.3s ease;
+        }
+        nav li ul.sub-menu ul.sub-sub-menu li a {
+            font-size: 1.0em; /* 最小 */
+            padding: 4px 10px;
+            color: var(--primary-text-color); /* 三级链接颜色 */
+        }
+        nav li ul.sub-menu ul.sub-sub-menu li a:hover {
+            background-color: var(--link-hover-bg);
+            color: var(--link-hover-text);
         }
 
         /* 访问计数器样式 */
         .visit-counter {
             margin-top: 20px;
             font-size: 1em;
-            color: #666;
+            color: var(--visit-counter-color);
             text-align: center;
+            transition: color 0.3s ease;
         }
         .visit-counter strong {
-            color: #007bb5;
+            color: var(--visit-strong-color);
             font-size: 1.1em;
+            transition: color 0.3s ease;
         }
 
         /* 底部页脚（作者和版权） */
         .footer {
-            margin-top: 50px; /* 距离上方内容的间距 */
+            margin-top: 50px;
             font-size: 0.9em;
-            color: #777;
+            color: var(--footer-text-color);
             text-align: center;
-            padding-bottom: 20px; /* 底部内边距 */
+            padding-bottom: 20px;
+            transition: color 0.3s ease;
         }
         .footer span {
             font-weight: bold;
-            color: #555;
+            color: var(--footer-strong-color);
+            transition: color 0.3s ease;
         }
 
         /* 小屏幕适配 */
@@ -156,9 +249,13 @@
                 width: 70px;
                 height: 70px;
             }
+            .theme-switch {
+                top: 20px;
+                right: 20px;
+            }
             .container {
                 padding: 30px 20px;
-                margin-top: 70px; /* 防止内容被头像遮挡 */
+                margin-top: 70px; /* 防止内容被头像和按钮遮挡 */
             }
             h1 {
                 font-size: 2.2em;
@@ -166,17 +263,13 @@
             h2 {
                 font-size: 1.5em;
             }
-            p {
-                font-size: 1em;
-            }
-            a {
-                font-size: 1em;
-                padding: 10px 15px;
-                min-width: unset;
-                width: 100%;
-            }
-            nav li ul {
+            nav li ul.sub-menu,
+            nav li ul.sub-menu ul.sub-sub-menu {
                 margin-left: 15px;
+                padding-left: 10px;
+            }
+            nav p {
+                padding-left: 10px;
             }
             .footer {
                 font-size: 0.8em;
@@ -185,8 +278,12 @@
     </style>
 </head>
 <body>
-    <!-- 左上角头像 - 现为纯色 -->
-    <div class="avatar-frame">
+    <!-- 左上角头像 -->
+    <div class="avatar-frame"></div>
+
+    <!-- 顶部主题切换按钮 -->
+    <div class="theme-switch">
+        <button id="theme-toggle">切换主题</button>
     </div>
 
     <div class="container">
@@ -197,21 +294,37 @@
             <h2>探索内容：</h2>
             <ul>
                 <li>
-                    <a href="botprofile.html">深入理解 Botprofile (BOT 视角与行为参数)</a>
-                    <p style="font-size: 0.9em; color: #777; margin-top: 5px; margin-bottom: 0;">了解如何通过 Botprofile 文件调整 BOT 的反应速度、精度和移动模式。</p>
+                    <a href="botprofile.html">BOTprofile：视角与行为参数</a>
+                    <p>了解如何通过 Botprofile 文件调整 BOT 的反应速度、精度和移动模式。</p>
                 </li>
                 <li>
-                    <a href="botstuff.html">Betterbots 插件 (Botstuff) 简介</a>
-                    <p style="font-size: 0.9em; color: #777; margin-top: 5px; margin-bottom: 0;">探索强大的 Betterbots 插件，实现对 BOT 行为的精细控制。</p>
+                    <!-- 插件分类入口 -->
+                    <a href="#">CSGOBetterbots 插件：功能增强核心</a>
+                    <p>深入了解 SourcePawn 插件，提升 BOT 游戏体验和智能。</p>
                     <ul class="sub-menu">
-                        <li><a href="botstuff_hs.html">修改 BOT 爆头率详解</a>
-                            <p style="font-size: 0.85em; color: #888; margin-top: 2px; margin-bottom: 0;">一步步教你如何调整 BOT 爆头率的参数。</p>
+                        <!-- 新增的 BOT 物品栏插件链接 -->
+                        <li><a href="bot_inventory.html">库存控制：bot_inventory</a>
+                            <p>为 BOT 随机分配武器皮肤、手套、音乐盒和特工模型，提升视觉体验。</p>
                         </li>
-                        <li><a href="botstuff_hs_calc.html">爆头率的数学原理与计算</a>
-                            <p style="font-size: 0.85em; color: #888; margin-top: 2px; margin-bottom: 0;">深入理解 BOT 爆头率背后的数学模型和计算方式。</p>
+                        <!-- 新增的 BOT 智能行为插件链接 -->
+                        <li><a href="bot_stuff.html">智能核心：bot_stuff</a>
+                            <p>改善 BOT 的购买策略、投掷物使用、瞄准和走位等 AI 行为。</p>
+                        </li>
+                        <!-- 原有的 Betterbots 插件及其子链接现在移到这里 -->
+                        <li><a href="botstuff.html">如何修改 bot_stuff 源码</a>
+                            <p>深入代码分析，实现对 BOT 行为的精细控制。</p>
+                            <ul class="sub-sub-menu">
+                                <li><a href="botstuff_hs.html">修改 BOT 爆头率详解</a>
+                                    <p>一步步教你如何调整 BOT 爆头率的参数。</p>
+                                </li>
+                                <li><a href="botstuff_hs_calc.html">爆头率的数学原理与计算</a>
+                                    <p>深入理解 BOT 爆头率背后的数学模型和计算方式。</p>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                 </li>
+                <!-- 您可以在这里继续添加其他内容链接，依照结构添加 sub-menu 或 sub-sub-menu -->
             </ul>
         </nav>
 
@@ -224,11 +337,38 @@
 
     <!-- 底部页脚 -->
     <footer class="footer">
-        <p>&copy; 2025 CSGOBots. All rights reserved. Made by <span>UN1</span> powered by Gemini.</p>
+        <p>&copy; 2025 CSGOBots. All rights reserved. Made by <span>un1</span> powered by Gemini.</p>
     </footer>
 
     <script>
-        // 获取或初始化访问次数
+        // -------- 主题切换逻辑 --------
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+
+        // 应用主题的函数
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                htmlElement.classList.add('dark-mode');
+                themeToggle.textContent = '切换至浅色模式';
+            } else {
+                htmlElement.classList.remove('dark-mode');
+                themeToggle.textContent = '切换至深色模式';
+            }
+        }
+
+        // 检查本地存储中是否有主题偏好，没有则默认浅色
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        applyTheme(savedTheme); // 页面加载时应用保存的主题
+
+        // 监听按钮点击事件
+        themeToggle.addEventListener('click', () => {
+            let currentTheme = htmlElement.classList.contains('dark-mode') ? 'dark' : 'light';
+            let newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+            localStorage.setItem('theme', newTheme); // 保存新主题偏好
+        });
+
+        // -------- 访问计数器逻辑 --------
         let pageVisits = localStorage.getItem('csgobots_page_visits');
         if (pageVisits) {
             pageVisits = parseInt(pageVisits) + 1; // 转换为数字并加1
