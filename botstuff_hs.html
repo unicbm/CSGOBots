@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>控制爆头率</title>
+    <link rel="icon" type="image/x-icon" href="https://icccbm.world/favicon.ico"> <!-- 你可以替换为实际的 favicon 路径 -->
+    <style>
+        /* Base Styles & Morandi Palette */
+        :root {
+            /* Morandi Light Palette */
+            --bg-color-light: #f7f9fc;
+            --text-color-light: #3a4750;
+            --heading-color-light: #5f747d;
+            --border-color-light: #e0e6ea;
+            --code-bg-light: #eef2f5;
+            --code-text-light: #546a74;
+            --accent-color-light: #8da3ac; /* Blue-grey */
+            --link-color-light: #7a9eaa;
+
+            /* Morandi Dark Palette */
+            --bg-color-dark: #2c3539;
+            --text-color-dark: #e0e6ea;
+            --heading-color-dark: #cdd4da;
+            --border-color-dark: #4a5d6a;
+            --code-bg-dark: #3a4750;
+            --code-text-dark: #e0e6ea;
+            --accent-color-dark: #9bb3bc; /* Lighter blue-grey */
+            --link-color-dark: #b8ccd2;
+
+            /* Current Theme Variables */
+            --bg-color: var(--bg-color-light);
+            --text-color: var(--text-color-light);
+            --heading-color: var(--heading-color-light);
+            --border-color: var(--border-color-light);
+            --code-bg: var(--code-bg-light);
+            --code-text: var(--code-text-light);
+            --accent-color: var(--accent-color-light);
+            --link-color: var(--link-color-light);
+            --highlight-bg: #e2f0ee; /* Muted Green */
+            --highlight-text: #5a7d74;
+            --note-bg: #fdf6ed; /* Muted Yellow */
+            --note-border: #f8c187;
+            --note-text: #8e6c4e;
+            --important-text: #c06c84; /* Muted Rose */
+        }
+
+        body.dark-mode {
+            --bg-color: var(--bg-color-dark);
+            --text-color: var(--text-color-dark);
+            --heading-color: var(--heading-color-dark);
+            --border-color: var(--border-color-dark);
+            --code-bg: var(--code-bg-dark);
+            --code-text: var(--code-text-dark);
+            --accent-color: var(--accent-color-dark);
+            --link-color: var(--link-color-dark);
+            --highlight-bg: #4a5d6a;
+            --highlight-text: #b8ccd2;
+            --note-bg: #4a423a;
+            --note-border: #a08451;
+            --note-text: #e0e6ea;
+            --important-text: #eaaec7;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            padding: 20px;
+            background-color: var(--code-bg); /* Use code background for sidebar */
+            border-right: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            flex-shrink: 0;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.02);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .sidebar h3 {
+            color: var(--heading-color);
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 1.2em;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar ul li {
+            margin-bottom: 10px;
+        }
+        .sidebar ul li a {
+            display: block;
+            padding: 8px 10px;
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .sidebar ul li a:hover {
+            background-color: var(--border-color);
+            color: var(--heading-color);
+        }
+        .sidebar .theme-toggle {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        .sidebar .theme-toggle button {
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .sidebar .theme-toggle button:hover {
+            background-color: #7a9eaa; /* Slightly darker accent */
+            transform: translateY(-1px);
+        }
+        body.dark-mode .sidebar .theme-toggle button:hover {
+            background-color: #8bbdc5; /* Slightly lighter accent for dark mode */
+        }
+
+        /* Main Content Styles */
+        .content-wrapper {
+            flex-grow: 1;
+            padding: 20px 40px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: var(--bg-color);
+            padding: 30px 0px; /* Adjust padding for inner content */
+            border-radius: 8px;
+        }
+        h1, h2, h3 {
+            color: var(--heading-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 40px;
+            transition: color 0.3s, border-color 0.3s;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.8em;
+            color: var(--link-color);
+            border-bottom: none;
+            margin-bottom: 15px;
+            margin-top: 0;
+        }
+        h2 {
+            font-size: 2em;
+        }
+        h3 {
+            font-size: 1.5em;
+            color: var(--accent-color);
+            border-bottom: 1px dashed var(--border-color);
+        }
+        p {
+            margin-bottom: 15px;
+        }
+        pre {
+            background-color: var(--code-bg);
+            font-family: 'Consolas', 'Monaco', monospace;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            color: var(--code-text);
+            border-left: 4px solid var(--accent-color);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+        code {
+            background-color: var(--border-color);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        ul, ol {
+            margin-left: 20px;
+            padding-left: 0;
+            margin-bottom: 15px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        strong {
+            color: var(--important-text);
+        }
+        em {
+            color: var(--accent-color);
+        }
+        .note {
+            background-color: var(--note-bg);
+            border-left: 5px solid var(--note-border);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: var(--note-text);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+        .highlight {
+            background-color: var(--highlight-bg);
+            color: var(--highlight-text);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        a:hover {
+            text-decoration: underline;
+            color: var(--accent-color);
+        }
+        /* Collapsible Code Blocks */
+        .collapsible {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1.1em;
+            font-family: 'Segoe UI', sans-serif;
+            transition: background-color 0.2s, color 0.2s;
+            border-radius: 6px;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .collapsible:hover {
+            background-color: var(--border-color);
+        }
+        .collapsible.active {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .collapsible .arrow {
+            transform: rotate(0deg);
+            transition: transform 0.2s ease-out;
+        }
+        .collapsible.active .arrow {
+            transform: rotate(90deg);
+        }
+        .content {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background-color: var(--code-bg);
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+            border-left: 4px solid var(--accent-color);
+            margin-bottom: 20px;
+        }
+        .content pre {
+            border-left: none; /* remove redundant border */
+            border-radius: 0;
+            margin: 0;
+            padding-top: 0;
+            padding-bottom: 15px;
+        }
+
+        /* Highlight/Glow on hover for specific link */
+        .manicobots-link {
+            transition: text-shadow 0.3s ease-in-out, color 0.3s;
+            text-decoration: none;
+        }
+        .manicobots-link:hover {
+            text-shadow: 0 0 8px rgba(141, 163, 172, 0.7), 0 0 15px rgba(141, 163, 172, 0.3); /* Soft glow */
+            text-decoration: none; /* Prevent underline on hover */
+        }
+        body.dark-mode .manicobots-link:hover {
+            text-shadow: 0 0 8px rgba(155, 179, 188, 0.7), 0 0 15px rgba(155, 179, 188, 0.3);
+        }
+
+        footer {
+            margin-top: 50px;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            color: var(--heading-color);
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>导航</h3>
+        <ul>
+            <li><a href="#primer">📚 SourcePawn & ConVar 初级入门</a></li>
+            <li><a href="#code-changes">💻 代码修改步骤</a></li>
+            <li><a href="#original-logic">1. Manico 的原始函数</a></li>
+            <li><a href="#un1-logic">2. Uni 的进阶修改版</a></li>
+            <li><a href="#declare-convars">3. 声明 ConVar</a></li>
+            <li><a href="#initialize-convars">4. 初始化 ConVar</a></li>
+            <li><a href="#deploy">5. 编译和部署</a></li>
+            <li><a href="#probability-difference">🤔 为什么我设置的爆头率与实际不同？</a></li>
+        </ul>
+        <div class="theme-toggle">
+            <button onclick="toggleTheme()">切换主题 (深色/浅色)</button>
+        </div>
+    </div>
+
+    <div class="content-wrapper">
+        <div class="container">
+            <h1>修改bot_stuff来控制爆头率</h1>
+            <p>你好！本指南将带你一步步了解，怎么在你使用的插件<a href="https://github.com/manicogaming/CSGOBetterBots" target="_blank" class="manicobots-link">Manico's CSGOBetterbots</a>里，增加一个自定义爆头率的功能。当然还会聊聊为什么你设置的，和Bot实际打出来的有差异。</p>
+
+            <h2 id="primer">📚 SourcePawn & ConVar 初级入门</h2>
+            <p>在开始修改前，先来简单了解一下插件的几个小概念：</p>
+            <ul>
+                <li>
+                    <strong>SourcePawn 是什么？</strong><br>
+                    SourcePawn 是一种编程语言，它是专门为 Valve 的 Source 引擎设计，用来编写 <a href="https://www.sourcemod.net/" target="_blank">SourceMod</a> 插件的。你现在看到的这些代码，就是用 SourcePawn 写的。通过 SourceMod 插件，我们可以在 CS:GO 等游戏里添加各种自定义功能，比如调整 Bot 的行为。
+                </li>
+                <li>
+                    <strong>ConVar (控制台变量) 是什么？</strong><br>
+                    ConVar 全称是 "Console Variable"，翻译过来就是“控制台变量”。简单来说，它就像是插件提供给服务器管理员的一个“开关”或“调节器”。有了 ConVar，你不需要修改或重新编译插件代码，就能直接在游戏控制台或者服务器配置文件里改变插件的一些设定，比如 Bot 的爆头率！
+                    <br>显然，比起每次都要关掉服务器、修改代码、重新编译、覆盖文件，用控制台更改参数是更合理轻松的选择，也更灵活。
+                </li>
+                <li>
+                    <strong>ConVar 在 SourcePawn 里长啥样？</strong><br>
+                    在 SourcePawn 代码里，一个 ConVar 首先需要被声明（告诉程序有这么个东西），格式会像 <code>ConVar g_cvYouNameIt;</code> 这样。
+                    <br>然后，在插件启动的时候，也就是在 <code>OnPluginStart()</code> 函数里，它需要被**初始化**（给它一个名字、默认值、描述等等），这会用到 <code>CreateConVar()</code> 函数。你会在后面的代码里看到这些格式。
+                </li>
+            </ul>
+
+            <h2 id="code-changes">💻 代码修改步骤</h2>
+
+            <p>下面，我们将从 Manico 的原始版本开始，一步步把它升级成带可配置爆头率的版本。</p>
+
+            <h3 id="original-logic">1. Manico 的原始函数：最初的爆头逻辑</h3>
+            <p>最开始的时候，Bot 瞄准目标的代码可能长这样。这里面的爆头率是固定写死的，调整起来很不方便：</p>
+            <button class="collapsible">点击展开/折叠 Manico 的原始代码 <span class="arrow">&#9658;</span></button>
+            <div class="content">
+<pre><code class="language-c">public void SelectBestTargetPos(int client, float fTargetPos[3])
+{
+	if(IsValidClient(g_iTarget[client]) && IsPlayerAlive(g_iTarget[client]))
+	{
+		int iBone = LookupBone(g_iTarget[client], "head_0");
+		int iSpineBone = LookupBone(g_iTarget[client], "spine_3");
+		if (iBone < 0 || iSpineBone < 0)
+			return;
+		
+		bool bShootSpine; // 默认值为 false，意味着倾向于射击头部
+		float fHead[3], fBody[3], fBad[3];
+		GetBonePosition(g_iTarget[client], iBone, fHead, fBad);
+		GetBonePosition(g_iTarget[client], iSpineBone, fBody, fBad);
+		
+		fHead[2] += 4.0;
+		
+		if (BotIsVisible(client, fHead, false, -1))
+		{
+			if (BotIsVisible(client, fBody, false, -1))
+			{
+				if (!IsValidEntity(g_iActiveWeapon[client])) return;
+				
+				int iDefIndex = GetEntProp(g_iActiveWeapon[client], Prop_Send, "m_iItemDefinitionIndex");
+				
+				switch(iDefIndex)
+				{
+					// 这些是大多数步枪、冲锋枪等等的武器ID，这里有个硬编码的概率
+					case 7, 8, 10, 13, 14, 16, 17, 19, 23, 24, 25, 26, 27, 28, 29, 33, 34, 35, 39, 60:
+					{
+						float fTargetDistance = GetVectorDistance(g_fBotOrigin[client], fHead);
+						// 核心判断：如果IsItMyChance(70.0) 返回true (有70%概率发生) 并且距离近
+						if (IsItMyChance(70.0) && fTargetDistance < 2000.0)
+							bShootSpine = true; // 目标瞄准身体（非爆头）
+					}
+					// 这些是AWP、散弹枪等等的武器ID，它们总是瞄准身体
+					case 9, 11, 38: // 9 是 AWP
+					{
+						bShootSpine = true; // 总是瞄准身体（非爆头）
+					}
+				}
+			}
+		}
+		else
+		{
+			// 头部不可见时的备用逻辑：尝试寻找其他可见骨骼
+			for (int b = 0; b <= sizeof(g_szBoneNames) - 1; b++)
+			{
+				iBone = LookupBone(g_iTarget[client], g_szBoneNames[b]);
+				if (iBone < 0)
+					return;
+				
+				GetBonePosition(g_iTarget[client], iBone, fHead, fBad);
+				
+				if (BotIsVisible(client, fHead, false, -1))
+					break;
+				else
+					fHead[2] = 0.0;
+			}
+		}
+		
+		if(bShootSpine)
+			fTargetPos = fBody; // 最终瞄准身体
+		else
+			fTargetPos = fHead; // 最终瞄准头部
+	}
+}
+</code></pre>
+            </div>
+            <p><strong>简单分析一下这个版本：</strong></p>
+            <ul>
+                <li><code>bShootSpine</code> 变量在函数开始时没有明确初始化，但根据后面的逻辑，它默认倾向于 <span class="highlight">false（瞄准头部）</span>。</li>
+                <li>对于大多数武器，如果距离很近（小于 <code>2000.0</code>），并且 <code>IsItMyChance(70.0)</code> 返回 <code>true</code>，Bot 才会选择瞄准身体。这意味着有 <span class="highlight">70% 的概率去瞄准身体，30% 的概率去瞄准头部。</span></li>
+                <li>对于像 AWP (武器ID 9) 这样的武器，Bot 总是瞄准身体。这很合理，因为打胸也能一枪死，强行追求爆头反而有风险。</li>
+            </ul>
+
+            <h3 id="un1-logic">2. un1 的修改版：让爆头率可控</h3>
+            <p>现在我们将上面的函数修改。这个版本引入了 ConVar ，实现了更精细的控制，比如全局强制爆头开关，以及 CT 和 T 阵营 Bot 不同的爆头率调整：</p>
+            <button class="collapsible">点击展开/折叠 un1 的进阶修改版代码 <span class="arrow">&#9658;</span></button>
+            <div class="content">
+<pre><code class="language-c">public void SelectBestTargetPos(int client, float fTargetPos[3])
+{
+	if(IsValidClient(g_iTarget[client]) && IsPlayerAlive(g_iTarget[client]))
+	{
+		int iBone = LookupBone(g_iTarget[client], "head_0");
+		int iSpineBone = LookupBone(g_iTarget[client], "spine_3");
+		if (iBone < 0 || iSpineBone < 0)
+			return;
+		
+		bool bShootSpine = false; // **重要！**在这里明确初始化为 false，表示默认瞄准头部
+		float fHead[3], fBody[3], fBad[3];
+		GetBonePosition(g_iTarget[client], iBone, fHead, fBad);
+		GetBonePosition(g_iTarget[client], iSpineBone, fBody, fBad);
+		
+		fHead[2] += 4.0; // 稍微抬高瞄准点，让子弹更容易命中真实头部区域
+
+		if (BotIsVisible(client, fHead, false, -1))
+		{
+			if (BotIsVisible(client, fBody, false, -1))
+			{
+				if (!IsValidEntity(g_iActiveWeapon[client])) return;
+				int iDefIndex = GetEntProp(g_iActiveWeapon[client], Prop_Send, "m_iItemDefinitionIndex");
+
+				// 优先判断：如果开启了全局强制爆头模式 (g_cvHeadShotOnly.BoolValue)
+				// 并且当前武器不是 AWP (武器ID 9)，或者这个 Bot 被特殊标记为强制爆头 (g_bHeadShotOnly[client])
+				if((g_cvHeadShotOnly.BoolValue && iDefIndex != 9) || g_bHeadShotOnly[client])
+				{
+					bShootSpine = false; // 强制瞄准头部
+				}
+				else // 如果没有强制爆头，就根据概率和武器类型来判断
+				{
+					switch(iDefIndex)
+					{
+						// 特定武器ID (AWP, 散弹枪等)，总是强制瞄准身体
+						case 9, 11, 38: // 9: Weapon_AWP, 11: Weapon_XM1014, 38: Weapon_SawedOff
+						{
+							bShootSpine = true;	// 强制射击脊椎（身体），即不爆头
+						}
+						// 大多数其他武器类型 (步枪、冲锋枪等)
+						default:
+						{
+                            float fCurrentHeadshotChance = 0.0;
+                            // 根据 Bot 的阵营，获取对应的爆头率 ConVar 值
+                            if (g_bIsCT[client])
+                            {
+                                fCurrentHeadshotChance = g_cvBotHSC.FloatValue; // 获取 CT 的爆头率参数
+                            }
+                            else if (g_bIsT[client])
+                            {
+                                fCurrentHeadshotChance = g_cvBotHST.FloatValue; // 获取 T 的爆头率参数
+                            }
+
+                            // 关键的爆头率判断：
+                            // 记住，IsItMyChance(X) 返回 true 的概率是 X%。
+                            // 如果返回 true，Bot 就会切换瞄准身体 (bShootSpine = true)。
+                            // 所以，如果想实现 fCurrentHeadshotChance% 的爆头率，
+                            // 那就需要 (100.0 - fCurrentHeadshotChance)% 的概率去瞄准身体。
+                            // 因此 IsItMyChance 的参数是 100.0 - fCurrentHeadshotChance。
+							if (IsItMyChance(100.0 - fCurrentHeadshotChance))
+							{
+								bShootSpine = true;	// Bot 决定射击脊椎（身体）
+							}
+                            // 如果 If 条件不满足，bShootSpine 仍然保持默认的 false，表示瞄准头部
+						}
+					}
+				}				
+			}
+		}
+		else
+		{
+			// 如果头部不可见，这里是尝试寻找其他可见骨骼的备用逻辑。
+			// 这个循环会找到第一个能看到的骨骼，并把它的位置赋给 fHead。
+			// 如果所有骨骼都看不到，fHead[2] 会被设为0.0，可能导致Bot瞄准地面，
+			// 在更复杂的Bot行为中，这块逻辑可能需要更精细的处理。
+			for (int b = 0; b <= sizeof(g_szBoneNames) - 1; b++)
+			{
+				iBone = LookupBone(g_iTarget[client], g_szBoneNames[b]);
+				if (iBone < 0)
+					return;
+				
+				GetBonePosition(g_iTarget[client], iBone, fHead, fBad);
+				
+				if (BotIsVisible(client, fHead, false, -1))
+					break; // 找到可见骨骼，跳出循环
+				else
+					fHead[2] = 0.0; // 当前骨骼不可见，重置，继续尝试下一个
+			}
+		}
+
+		// 最后，根据 bShootSpine 的值来确定最终 Bot 要瞄准的位置
+		if(bShootSpine)
+			fTargetPos = fBody; // 瞄准身体
+		else
+			fTargetPos = fHead; // 瞄准头部
+	}
+}
+</code></pre>
+            </div>
+            <div class="note">
+                <h4>⚠️ 关于 IsItMyChance() 的知识</h4>
+                <p>在代码里，<code>if (IsItMyChance(X)) bShootSpine = true;</code> 这句的意思是说：当 <code>IsItMyChance(X)</code> 返回 <code>true</code> 的时候（它的成功概率是 <code>X%</code>），Bot 就会瞄准身体，也就是**不爆头**。</p>
+                <p>所以，如果你想要 Bot 有 <strong>V% 的概率爆头</strong>，那么你给 <code>IsItMyChance</code> 传的参数应该是 <code>(100.0 - V)</code>。这样，当它以 <code>(100-V)%</code> 的概率返回 <code>true</code> 时，就瞄准身体；当它以 <code>V%</code> 的概率返回 <code>false</code> 时，就瞄准头部，这正好符合“V%爆头”的逻辑！</p>
+                <p>上面的代码会按这个逻辑来设置 ConVar，所以 ConVar 的值直接就是你想要的爆头率百分比（0.0到100.0）。</p>
+            </div>
+
+            <h3 id="declare-convars">3. 声明 ConVar</h3>
+            <p>在你的 SourceMod (SP) 插件文件最上面，或者全局变量声明的地方，你需要告诉程序你将会有这些 ConVar。根据 SourceMod 的常用写法，会像这样声明：</p>
+            <button class="collapsible">点击展开/折叠 ConVar 声明代码 <span class="arrow">&#9658;</span></button>
+            <div class="content">
+<pre><code class="language-c">#include &lt;sourcemod&gt; // SourceMod 插件必备的库
+#include &lt;sdktools&gt;  // 如果你的插件用到 LookupBone, GetBonePosition 等函数，也需要这个，通常不用自己改动
+
+// ... 其他你插件里本来就有的全局变量 ...
+
+// 强制爆头模式的 ConVar
+ConVar g_cvHeadShotOnly;
+
+// Bot CT 爆头率的 ConVar
+ConVar g_cvBotHSC;
+
+// Bot T 爆头率的 ConVar
+ConVar g_cvBotHST;
+
+// 假设这些是你插件里已经有了的变量，用来判断 Bot 阵营或特殊标记
+bool g_bIsCT[MAXPLAYERS+1]; 
+bool g_bIsT[MAXPLAYERS+1];
+bool g_bHeadShotOnly[MAXPLAYERS+1]; // 每个 Bot 的强制爆头标记
+</code></pre>
+            </div>
+
+            <h3 id="initialize-convars">4. 初始化 ConVar</h3>
+            <p>ConVar 声明之后，你还需要告诉程序它们叫什么名字、默认值是多少、有什么用。这些初始化工作通常在你的插件启动函数 <code>OnPluginStart</code> 里完成：</p>
+            <button class="collapsible">点击展开/折叠 ConVar 初始化代码 <span class="arrow">&#9658;</span></button>
+            <div class="content">
+<pre><code class="language-c">public void OnPluginStart()
+{
+    // ... 其他你插件里本来就有的初始化代码 ...
+
+    // 创建“强制爆头模式”ConVar。注意这里的命名通常会自动加上 'sm_' 前缀
+    g_cvHeadShotOnly = CreateConVar(
+        "bot_headshot_only",          // ConVar 在控制台里的名字
+        "0",                             // 默认值是“0”，表示关闭强制爆头
+        "如果开启(1), Bot 将总是尝试爆头 (AWP除外).", // 在控制台输入 'sm_cvarlist' 时能看到的描述
+        _,                               // 这个下划线表示使用默认的 FCVAR_PLUGIN 标志
+        true, 0.0,                       // 最小值是 0.0
+        true, 1.0                        // 最大值是 1.0 (因为是个开关，只有0和1)
+    );
+
+    // 创建 CT 阵营 Bot 爆头率 ConVar
+    g_cvBotHSC = CreateConVar(
+        "bot_hsc",            // CT 爆头率 ConVar 的名字
+        "75.0",                          // 默认 CT 爆头率是 75.0%。注意：这是你提供的默认值。
+        "Bot Stuff - HSC parameter.\nDefault: 75.0", // 描述
+        _,                               // 默认标志
+        true, 0.0,                       // 最小值 0.0
+        true, 100.0                      // 最大值 100.0
+    );
+
+    // 创建 T 阵营 Bot 爆头率 ConVar
+    g_cvBotHST = CreateConVar(
+        "bot_hst",            // T 爆头率 ConVar 的名字
+        "75.0",                         // 默认 T 爆头率是 75.0%。注意：这是你提供的默认值。
+        "Bot Stuff - HST parameter.\nDefault: 75.0", // 描述
+        _,                               // 默认标志
+        true, 0.0,                      // 最小值 0.0
+        true, 100.0                     // 最大值 100.0
+    );
+}
+</code></pre>
+            </div>
+            <p><strong>关于 ConVar 名字的小提醒：</strong></p>
+            <p>根据 SourceMod 的规则，如果你在 <code>CreateConVar</code> 里没有给 ConVar 名字加上 <code>sm_</code> 前缀，但使用了 <code>FCVAR_PLUGIN</code> 标志（这个在你提供的代码里用 <code>_</code> 占位符默认是开启的），那么 SourceMod 会自动帮你加上 <code>sm_</code>。所以，虽然你代码里写的是 <code>"bot_hst"</code>，但在控制台里你可能需要用 <code>sm_bot_hst</code> 来设置它。</p>
+
+            <h3 id="deploy">5. 编译和部署</h3>
+            <p>好啦，代码部分搞定！现在你需要把这些代码保存成一个 <code>.sp</code> 文件（最好备份一下再保存），然后用 SourceMod 的编译器把它编译成 <code>.smx</code> 文件。如果你不知道怎么编译，可以去 <a href="https://wiki.alliedmods.net/Compiling_Sourcemod_Plugins" target="_blank">SourceMod 官网</a> 找教程。</p>
+            <p>编译好之后，把生成的 <code>.smx</code> 文件放到你的 CS:GO 服务器的 <code>addons/sourcemod/plugins</code> 文件夹里。</p>
+            <p>服务器启动或加载插件后，你就可以在游戏控制台里输入以下命令来调整 Bot 的爆头率：</p>
+            <ul>
+                <li><code>sm_rcon bot_headshot_only 1</code>：开启全局强制爆头模式。除了 AWP (武器ID 9)，所有武器都会尝试爆头。</li>
+                <li><code>sm_rcon bot_headshot_only 0</code>：关闭全局强制爆头模式，Bot 会根据 CT/T 阵营的概率来爆头。</li>
+                <li><code>sm_rcon bot_hsc [0.0-100.0]</code>：设置 CT 阵营 Bot 的爆头率。比如，<code>sm_bot_hsc 75.0</code> 会把 CT Bot 爆头率设为 75%。</li>
+                <li><code>sm_rcon bot_hst [0.0-100.0]</code>：设置 T 阵营 Bot 的爆头率。比如，<code>sm_bot_hst 50.0</code> 会把 T Bot 爆头率设为 50%。</li>
+            </ul>
+            <p>如果你想让这些设置在服务器重启后也生效，你可以在服务器的 <code>cfg/sourcemod/</code> 文件夹里，创建一个对应 ConVar 名字的 <code>.cfg</code> 文件（比如 <code>sm_bot_hsc.cfg</code>），在里面写入你的值，这样服务器每次启动都会自动加载它们。</p>
+
+            <h2 id="probability-difference">🤔 为什么我设置的爆头率与实际不同？</h2>
+            <p>这是一个很常见也很容易让人困惑的问题。你通过 ConVar 设置的比如 <code>sm_bot_hsc</code>，它只是 Bot <em>在特定情况下</em>决定瞄准头部的一个概率，而不是他们实际打出的爆头总数的百分比。</p>
+
+            <h3>核心概念：条件概率与执行限制</h3>
+            <p>你设定的爆头率 ConVar 只有在满足了一系列 <strong class="highlight">前提条件</strong> 之后，才会真正“生效”：</p>
+            <ol>
+                <li><strong>爆头的伤害高：</strong> 这导致死亡的击杀往往是因为爆头，结算就是爆头+1。</li>
+                 <p>具体原因在这：<a href="botstuff_hs_calc.html">爆头率计算的数学原理</a>。</p>
+                <li><strong>头部和身体“都”能看见：</strong></li>
+                <li><strong>武器类型限制：</strong>
+                    <p>像 AWP (9)、XM1014 (11) 和 Sawed-Off (38) 这些武器，Bot 是<strong class="important-text">永远瞄准身体</strong>的（<code>bShootSpine = true</code>)。无论 ConVar 爆头率设得多高，这些武器的爆头率在代码层面就是 0%。对于ProBot，狙击手的爆头率会低一些。</p>
+                </li>
+            </ol>
+        </div>
+        <footer>
+            作者: un1 powered by Gemini | <a href="https://icccbm.world" target="_blank">回到uni的主页</a>
+        </footer>
+    </div>
+
+    <script>
+        // Collapsible functionality
+        var coll = document.getElementsByClassName("collapsible");
+        var i;
+
+        for (i = 0; i < coll.length; i++) {
+            coll[i].addEventListener("click", function() {
+                this.classList.toggle("active");
+                var content = this.nextElementSibling;
+                var arrow = this.querySelector('.arrow');
+                if (content.style.maxHeight){
+                    content.style.maxHeight = null;
+                    arrow.style.transform = 'rotate(0deg)';
+                } else {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    arrow.style.transform = 'rotate(90deg)';
+                }
+            });
+        }
+
+        // Theme Toggle functionality
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            // Optionally, save preference to localStorage
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Apply saved theme on load
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        });
+    </script>
+</body>
+</html>
