@@ -1,372 +1,368 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>CSGOBots · 星空极简版</title>
-<style>
-  /* CSS 变量定义：保持整体深色调的星空风格 */
-  :root{
-    --fg:#fff; /* 前景色（主要文本） */
-    --muted:#aaa; /* 柔和色（次要文本，如描述） */
-    --line:rgba(255,255,255,0.15); /* 分隔线和边框颜色，略亮于之前 */
-    --btn-bg:#fff; /* 按钮背景（未使用，但保留） */
-    --btn-fg:#000; /* 按钮前景色（未使用，但保留） */
-    --radius:18px; /* 圆角半径 */
-    --content-w:1120px; /* 内容最大宽度 */
-    --ease:cubic-bezier(.2,.8,.2,1); /* 动画缓动函数 */
-  }
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CSGOBots · 星空极简版</title>
 
-  html,body{
-    height:100%; /* 高度占满视口 */
-    margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Arial,"Noto Sans",sans-serif;
-    background:transparent; /* 允许 Canvas 背景透出 */
-    color:var(--fg); /* 文本颜色 */
-    overflow-x:hidden; /* 防止水平滚动条出现 */
-  }
+    <!-- 添加 Favicon：假设文件在 assets/favicon 目录下 -->
+    <link rel="icon" type="image/x-icon" href="/assets/favicon/favicon.ico">
+    <!-- 如果您有其他尺寸的 PNG 文件，也可添加，例如： -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png">
+    <!-- 针对 Apple 设备的高清图标（如果有） -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png">
 
-  /* 星空画布 */
-  #bgCanvas{
-    position:fixed; /* 固定定位，铺满整个页面 */
-    inset:0; /* 上下左右都为0，铺满 */
-    z-index:-1; /* 确保在所有内容之下 */
-    background:#000; /* 作为 Canvas 动画未加载前的备用背景 */
-  }
+    <style>
+        /* CSS 变量定义：保持整体深色调的星空风格 */
+        :root {
+            --fg: #fff; /* 前景色（主要文本） */
+            --muted: #aaa; /* 柔和色（次要文本，如描述） */
+            --line: rgba(255,255,255,0.15); /* 分隔线和边框颜色，略亮于之前 */
+            --btn-bg: #fff; /* 按钮背景（未使用，但保留） */
+            --btn-fg: #000; /* 按钮前景色（未使用，但保留） */
+            --radius: 18px; /* 圆角半径 */
+            --content-w: 1120px; /* 内容最大宽度 */
+            --ease: cubic-bezier(.2,.8,.2,1); /* 动画缓动函数 */
+        }
 
-  /* 导航栏 */
-  .nav{
-    position:sticky; /* 粘性定位，滚动时停留在顶部 */
-    top:0;
-    z-index:1000; /* 确保在最上层 */
-    width:100%;
-    transition:background-color .35s var(--ease); /* 背景色过渡动画 */
-    background:transparent; /* 默认透明，显示星空 */
-  }
-  .nav.scrolled{
-    background:rgba(0,0,0,0.6); /* 滚动后半透明黑色背景 */
-    backdrop-filter: blur(6px); /* 背景模糊效果 */
-  }
-  .nav-inner{
-    margin:0 auto; /* 居中 */
-    max-width:var(--content-w); /* 限制最大宽度 */
-    display:flex; /* Flex布局 */
-    align-items:center;
-    justify-content:space-between; /* 左右两端对齐 */
-    padding:14px 20px;
-  }
-  .brand{
-    font-weight:700;
-    letter-spacing:.4px;
-    font-size:18px;
-  }
-  .links{
-    display:flex;
-    gap:28px; /* 链接间距 */
-    align-items:center;
-  }
-  .links a{
-    position:relative;
-    text-decoration:none;
-    color:var(--fg);
-    font-size:15px;
-    padding:6px 2px;
-  }
-  .links a:after{
-    content:"";
-    position:absolute;
-    left:0;
-    bottom:-2px;
-    height:1px;
-    width:0%;
-    background:currentColor; /* 下划线颜色与文本颜色一致 */
-    transition:width .25s var(--ease); /* 宽度过渡动画 */
-  }
-  .links a:hover:after{ width:100%; } /* 悬停时下划线展开 */
+        html, body {
+            height: 100%; /* 高度占满视口 */
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background: transparent; /* 允许 Canvas 背景透出 */
+            color: var(--fg); /* 文本颜色 */
+            overflow-x: hidden; /* 防止水平滚动条出现 */
+        }
 
-  /* 内容区 */
-  .section{
-    max-width:var(--content-w); /* 限制最大宽度 */
-    margin:120px auto; /* 上下外边距，左右居中 */
-    padding:0 20px;
-    background: rgba(0,0,0,0.15); /* 略微调亮半透明黑色背景，提供对比度 */
-    border-radius: var(--radius); /* 与卡片保持风格一致 */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* 增加一点阴影，让内容更浮出 */
-    transition: background 0.3s ease, box-shadow 0.3s ease;
-  }
-  .section h2{
-    font-size: clamp(28px, 4vw, 40px); /* 响应式字体大小 */
-    margin:0 0 16px;
-  }
-  .lead{
-    color:var(--muted);
-    margin:0 0 32px;
-    font-size:18px;
-  }
+        /* 星空画布 */
+        #bgCanvas {
+            position: fixed; /* 固定定位，铺满整个页面 */
+            inset: 0; /* 上下左右都为0，铺满 */
+            z-index: -1; /* 确保在所有内容之下 */
+            background: #000; /* 作为 Canvas 动画未加载前的备用背景 */
+        }
 
-  /* 卡片 */
-  .grid{
-    display:grid; /* 网格布局 */
-    gap:18px; /* 网格间距 */
-    grid-template-columns: repeat(12, 1fr); /* 12列 */
-  }
-  .card{
-    grid-column: span 12; /* 默认占据12列（全宽） */
-    border:1px solid var(--line); /* 边框颜色 */
-    border-radius:var(--radius);
-    padding:24px;
-    background:rgba(255,255,255,0.05); /* 半透明白色背景 */
-    transition:transform .35s var(--ease), background .35s var(--ease); /* 动画效果 */
-  }
-  .card:hover{
-    transform:translateY(-2px); /* 悬停时上浮 */
-    background:rgba(255,255,255,0.1); /* 悬停时背景更亮 */
-  }
-  .card a.title-link{
-    text-decoration:none;
-    color:var(--fg);
-    font-weight:700;
-    font-size:20px;
-  }
-  .card p{
-    color:var(--muted);
-    margin:8px 0 0;
-  }
+        /* 导航栏 */
+        .nav {
+            position: sticky; /* 粘性定位，滚动时停留在顶部 */
+            top: 0;
+            z-index: 1000; /* 确保在最上层 */
+            width: 100%;
+            transition: background-color .35s var(--ease); /* 背景色过渡动画 */
+            background: transparent; /* 默认透明，显示星空 */
+        }
+        .nav.scrolled {
+            background: rgba(0,0,0,0.6); /* 滚动后半透明黑色背景 */
+            backdrop-filter: blur(6px); /* 背景模糊效果 */
+        }
+        .nav-inner {
+            margin: 0 auto; /* 居中 */
+            max-width: var(--content-w); /* 限制最大宽度 */
+            display: flex; /* Flex布局 */
+            align-items: center;
+            justify-content: space-between; /* 左右两端对齐 */
+            padding: 14px 20px;
+        }
+        .brand {
+            font-weight: 700;
+            letter-spacing: .4px;
+            font-size: 18px;
+        }
+        .links {
+            display: flex;
+            gap: 28px; /* 链接间距 */
+            align-items: center;
+        }
+        .links a {
+            position: relative;
+            text-decoration: none;
+            color: var(--fg);
+            font-size: 15px;
+            padding: 6px 2px;
+        }
+        .links a:after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -2px;
+            height: 1px;
+            width: 0%;
+            background: currentColor; /* 下划线颜色与文本颜色一致 */
+            transition: width .25s var(--ease); /* 宽度过渡动画 */
+        }
+        .links a:hover:after { width: 100%; } /* 悬停时下划线展开 */
 
-  /* 响应式卡片布局 */
-  @media (min-width:720px){
-    .card.span-6{ grid-column: span 6; } /* 720px以上占据6列 */
-  }
-  @media (min-width:1024px){
-    .card.span-4{ grid-column: span 4; } /* 1024px以上占据4列 */
-  }
+        /* 内容区 */
+        .section {
+            max-width: var(--content-w); /* 限制最大宽度 */
+            margin: 120px auto; /* 上下外边距，左右居中 */
+            padding: 0 20px;
+            background: rgba(0,0,0,0.15); /* 略微调亮半透明黑色背景，提供对比度 */
+            border-radius: var(--radius); /* 与卡片保持风格一致 */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* 增加一点阴影，让内容更浮出 */
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        .section h2 {
+            font-size: clamp(28px, 4vw, 40px); /* 响应式字体大小 */
+            margin: 0 0 16px;
+        }
+        .lead {
+            color: var(--muted);
+            margin: 0 0 32px;
+            font-size: 18px;
+        }
 
-  /* 子列表 */
-  .sublist{
-    margin-top:14px;
-    padding-top:10px;
-    border-top:1px dashed var(--line); /* 虚线分隔 */
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-  }
-  .subitem a{
-    color:var(--fg);
-    text-decoration:none;
-    font-weight:600;
-    position:relative;
-    padding-bottom:4px;
-  }
-  .subitem a:after{
-    content:"";
-    position:absolute;
-    left:0;
-    bottom:0;
-    height:1px;
-    width:0%;
-    background:currentColor;
-    transition:width .25s var(--ease);
-  }
-  .subitem a:hover:after{ width:100%; }
-  .subitem p{
-    color:var(--muted);
-    margin:4px 0 0;
-    font-size:14px;
-  }
+        /* 卡片 */
+        .grid {
+            display: grid; /* 网格布局 */
+            gap: 18px; /* 网格间距 */
+            grid-template-columns: repeat(12, 1fr); /* 12列 */
+        }
+        .card {
+            grid-column: span 12; /* 默认占据12列（全宽） */
+            border: 1px solid var(--line); /* 边框颜色 */
+            border-radius: var(--radius);
+            padding: 24px;
+            background: rgba(255,255,255,0.05); /* 半透明白色背景 */
+            transition: transform .35s var(--ease), background .35s var(--ease); /* 动画效果 */
+        }
+        .card:hover {
+            transform: translateY(-2px); /* 悬停时上浮 */
+            background: rgba(255,255,255,0.1); /* 悬停时背景更亮 */
+        }
+        .card a.title-link {
+            text-decoration: none;
+            color: var(--fg);
+            font-weight: 700;
+            font-size: 20px;
+        }
+        .card p {
+            color: var(--muted);
+            margin: 8px 0 0;
+        }
 
-  /* 动画类 */
-  .reveal{
-    opacity:0;
-    transform: translateY(16px);
-    transition: opacity .7s var(--ease), transform .7s var(--ease);
-  }
-  .reveal.show{
-    opacity:1;
-    transform: translateY(0);
-  }
+        /* 响应式卡片布局 */
+        @media (min-width: 720px) {
+            .card.span-6 { grid-column: span 6; } /* 720px以上占据6列 */
+        }
+        @media (min-width: 1024px) {
+            .card.span-4 { grid-column: span 4; } /* 1024px以上占据4列 */
+        }
 
-  /* 页脚 */
-  footer{
-    max-width:var(--content-w);
-    margin:80px auto 40px;
-    padding:0 20px;
-    color:var(--muted);
-    text-align:center;
-  }
-  .meta{
-    border-top:1px solid var(--line);
-    padding-top:16px;
-    margin-top:20px;
-    font-size:14px;
-  }
-</style>
+        /* 子列表 */
+        .sublist {
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--line); /* 虚线分隔 */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .subitem a {
+            color: var(--fg);
+            text-decoration: none;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 4px;
+        }
+        .subitem a:after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            height: 1px;
+            width: 0%;
+            background: currentColor;
+            transition: width .25s var(--ease);
+        }
+        .subitem a:hover:after { width: 100%; }
+        .subitem p {
+            color: var(--muted);
+            margin: 4px 0 0;
+            font-size: 14px;
+        }
+
+        /* 动画类 */
+        .reveal {
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity .7s var(--ease), transform .7s var(--ease);
+        }
+        .reveal.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 页脚 */
+        footer {
+            max-width: var(--content-w);
+            margin: 80px auto 40px;
+            padding: 0 20px;
+            color: var(--muted);
+            text-align: center;
+        }
+        .meta {
+            border-top: 1px solid var(--line);
+            padding-top: 16px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
-<canvas id="bgCanvas"></canvas>
+    <canvas id="bgCanvas"></canvas>
 
-<header class="nav" id="nav">
-  <div class="nav-inner">
-    <div class="brand">UNI</div>
-    <nav class="links">
-      <a href="#explore">内容</a>
-      <a href="#about">关于</a>
-    </nav>
-  </div>
-</header>
-
-<section class="section reveal" id="explore">
-  <h2>探索内容</h2>
-  <p class="lead">从行为配置到源码改造，这里集中呈现你需要的入口。</p>
-  <div class="grid">
-    <article class="card span-6">
-      BOTprofile：视角与行为参数 
-      <br><a class="title-link" href="botprofile.html"> 普通版  </a><a class="title-link" href="botprofile_star.html">星空 </a>
-      <p>了解如何通过 botprofile.db 文件调整反应速度、精度和阻尼系统。</p>
-    </article>
-
-    <article class="card span-6">
-      <a class="title-link" href="#">CSGOBetterbots</a>
-      <p>深入了解 SourcePawn 插件，提升 BOT 游戏体验和智能。</p>
-      <div class="sublist">
-        <div class="subitem">
-          <a href="botstuff_inventory_note.html">介绍 bot_inventory</a>
-          <p>为 BOT 分配武器皮肤、手套、音乐盒和特工模型。</p>
+    <header class="nav" id="nav">
+        <div class="nav-inner">
+            <div class="brand">UNI</div>
+            <nav class="links">
+                <a href="#explore">内容</a>
+                <a href="#about">关于</a>
+            </nav>
         </div>
-        <div class="subitem">
-          <a href="botstuff_note.html">介绍 bot_stuff</a>
-          <p>改善 BOT 的购买策略、投掷物使用、瞄准和走位。</p>
+    </header>
+
+    <section class="section reveal" id="explore">
+        <h2>探索内容</h2>
+        <p class="lead">从行为配置到源码改造，这里集中呈现你需要的入口。</p>
+        <div class="grid">
+            <article class="card span-6">
+                BOTprofile：视角与行为参数 
+                <br><a class="title-link" href="pages/botprofile.html"> 普通版  </a><a class="title-link" href="pages/botprofile_star.html">星空 </a>
+                <p>了解如何通过 botprofile.db 文件调整反应速度、精度和阻尼系统。</p>
+            </article>
+
+            <article class="card span-6">
+                <a class="title-link" href="#">CSGOBetterbots</a>
+                <p>深入了解 SourcePawn 插件，提升 BOT 游戏体验和智能。</p>
+                <div class="sublist">
+                    <div class="subitem">
+                        <a href="pages/botstuff_inventory_note.html">介绍 bot_inventory</a>
+                        <p>为 BOT 分配武器皮肤、手套、音乐盒和特工模型。</p>
+                    </div>
+                    <div class="subitem">
+                        <a href="pages/botstuff_note.html">介绍 bot_stuff</a>
+                        <p>改善 BOT 的购买策略、投掷物使用、瞄准和走位。</p>
+                    </div>
+                    <div class="subitem">
+                        <a href="pages/botstuff.html">修改 bot_stuff 源码</a>
+                        <p>深入代码分析，实现精细控制。</p>
+                    </div>
+                    <div class="subitem">
+                        <a href="pages/botstuff_hs.html">自定义爆头率教程</a>
+                        <p>设置爆头率的参数。</p>
+                    </div>
+                    <div class="subitem">
+                        <a href="pages/botstuff_hs_calc.html">爆头率的数学原理与计算</a>
+                        <p>理解爆头率背后的数学模型。</p>
+                    </div>
+                </div>
+            </article>
         </div>
-        <div class="subitem">
-          <a href="botstuff.html">修改 bot_stuff 源码</a>
-          <p>深入代码分析，实现精细控制。</p>
-        </div>
-        <div class="subitem">
-          <a href="botstuff_hs.html">自定义爆头率教程</a>
-          <p>设置爆头率的参数。</p>
-        </div>
-        <div class="subitem">
-          <a href="botstuff_hs_calc.html">爆头率的数学原理与计算</a>
-          <p>理解爆头率背后的数学模型。</p>
-        </div>
-      </div>
-    </article>
-  </div>
-</section>
+    </section>
 
-<section class="section reveal" id="about">
-  <h2>关于项目</h2>
-  <p class="lead">CSGOBots 聚焦于提升 BOT 的智能与乐趣，文档清晰、示例充分，助你快速上手改造。</p>
-</section>
+    <section class="section reveal" id="about">
+        <h2>关于项目</h2>
+        <p class="lead">CSGOBots 聚焦于提升 BOT 的智能与乐趣，文档清晰、示例充分，助你快速上手改造。</p>
+    </section>
 
-<footer class="reveal">
-  <div>作者：un1 · Powered by GPT-5 & Gemini</div>
-  <div class="meta">&copy; 2025 All rights reserved.</div>
-</footer>
+    <footer class="reveal">
+        <div>作者：un1 · Powered by GPT-5 & Gemini</div>
+        <div class="meta">&copy; 2025 All rights reserved.</div>
+    </footer>
 
-<script>
-/* 彩色渐变科幻星空背景动画*/
-const canvas=document.getElementById("bgCanvas"),ctx=canvas.getContext("2d");
-let w,h,stars=[];
+    <script>
+        /* 彩色渐变科幻星空背景动画*/
+        const canvas = document.getElementById("bgCanvas"), ctx = canvas.getContext("2d");
+        let w, h, stars = [];
 
-// 调整Canvas大小以适应窗口
-function resize(){
-  w=canvas.width=window.innerWidth;
-  h=canvas.height=window.innerHeight;
-}
-window.addEventListener("resize",resize); // 监听窗口大小变化
-resize(); // 初始化Canvas大小
+        // 调整Canvas大小以适应窗口
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        window.addEventListener("resize", resize); // 监听窗口大小变化
+        resize(); // 初始化Canvas大小
 
-// 初始化单个星星数据（用于首次生成和重置）
-function createStar(){
-  // 调整 x,y 的随机范围，使其能在屏幕边缘生成，减少中心集中感
-  // Z 也更随机一些，减少整齐的飞行感
-  return {
-    x: (Math.random() - 0.5) * w * 1.5, // 扩展初始 X 范围
-    y: (Math.random() - 0.5) * h * 1.5, // 扩展初始 Y 范围
-    z: Math.random() * w,    // Z坐标 (模拟深度)
-    // **** 颜色优化：限制到蓝白到黄的色温范围，降低饱和度 ****
-    // HUE (色相) 范围：例如 180-240 (蓝), 0-60 (红黄). 这里取一个更自然发白的范围
-    // 比如 40-70 为暖白，190-220 为冷白。
-    // 我们用一个组合：随机取一个偏向蓝色的 HUE 或偏向黄色的 HUE
-    color: (() => {
-      const hueBase = Math.random() < 0.5 ? 200 : 50; // 50 (黄橙) 或 200 (蓝)
-      const hueVariation = (Math.random() - 0.5) * 30; // 随机 ±15 变化
-      const saturation = Math.floor(Math.random() * 20) + 30; // 30%-50% 饱和度
-      const lightness = Math.floor(Math.random() * 20) + 70; // 70%-90% 亮度
-      return `hsl(${hueBase + hueVariation}, ${saturation}%, ${lightness}%)`;
-    })()
-  };
-}
+        // 初始化单个星星数据（用于首次生成和重置）
+        function createStar() {
+            return {
+                x: (Math.random() - 0.5) * w * 1.5, // 扩展初始 X 范围
+                y: (Math.random() - 0.5) * h * 1.5, // 扩展初始 Y 范围
+                z: Math.random() * w,    // Z坐标 (模拟深度)
+                color: (() => {
+                    const hueBase = Math.random() < 0.5 ? 200 : 50; // 50 (黄橙) 或 200 (蓝)
+                    const hueVariation = (Math.random() - 0.5) * 30; // 随机 ±15 变化
+                    const saturation = Math.floor(Math.random() * 20) + 30; // 30%-50% 饱和度
+                    const lightness = Math.floor(Math.random() * 20) + 70; // 70%-90% 亮度
+                    return `hsl(${hueBase + hueVariation}, ${saturation}%, ${lightness}%)`;
+                })()
+            };
+        }
 
-// 初始化星星数据
-function initStars(count=200){ // 星星数量可调
-  stars=[];
-  for(let i=0;i<count;i++){
-    stars.push(createStar());
-  }
-}
+        // 初始化星星数据
+        function initStars(count = 200) { // 星星数量可调
+            stars = [];
+            for (let i = 0; i < count; i++) {
+                stars.push(createStar());
+            }
+        }
 
-// 动画核心函数
-function animate(){
-  ctx.clearRect(0,0,w,h); // 每帧清除Canvas
+        // 动画核心函数
+        function animate() {
+            ctx.clearRect(0, 0, w, h); // 每帧清除Canvas
 
-  // 绘制背景渐变云雾 (与上次相同，亮度保持在 10%/15%)
-  const grad=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,w/1.2); 
-  const time=Date.now()*0.0001;
-  grad.addColorStop(0,`hsl(${(time*200)%360},50%,10%)`); // 中心颜色
-  grad.addColorStop(1,`hsl(${(time*200+120)%360},50%,15%)`); // 边缘颜色
-  ctx.fillStyle=grad;
-  ctx.fillRect(0,0,w,h);
+            // 绘制背景渐变云雾
+            const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 1.2);
+            const time = Date.now() * 0.0001;
+            grad.addColorStop(0, `hsl(${(time * 200) % 360},50%,10%)`); // 中心颜色
+            grad.addColorStop(1, `hsl(${(time * 200 + 120) % 360},50%,15%)`); // 边缘颜色
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
 
-  // 绘制星星
-  for(let i=0;i<stars.length;i++){
-    let s=stars[i];
-    s.z-=2; // Z坐标逐渐减小，模拟星星向观察者移动
+            // 绘制星星
+            for (let i = 0; i < stars.length; i++) {
+                let s = stars[i];
+                s.z -= 2; // Z坐标逐渐减小，模拟星星向观察者移动
 
-    // 如果星星Z坐标小于等于0（到达观察者），重新初始化其位置
-    if(s.z<=0){
-      // 使用新的 createStar 逻辑重新生成这颗星
-      stars[i] = createStar(); 
-      s = stars[i]; // 确保 s 引用的是新对象
-    }
+                if (s.z <= 0) {
+                    stars[i] = createStar();
+                    s = stars[i];
+                }
 
-    // 计算2D投影坐标 (简单的透视投影)
-    // 调整 k 值，使透视效果更自然，没那么“集中”
-    const perspectiveFactor = 500; // 这个值越大，透视感越强，星星越集中
-    let k = perspectiveFactor / s.z; 
-    let px = s.x * k + w/2;
-    let py = s.y * k + h/2;
+                const perspectiveFactor = 500; // 透视因子
+                let k = perspectiveFactor / s.z;
+                let px = s.x * k + w / 2;
+                let py = s.y * k + h / 2;
 
-    // 检查星星是否在 Canvas 范围内 (略微扩大检查范围，防止边缘突然消失)
-    if(px < -w/2 || px > w*1.5 || py < -h/2 || py > h*1.5) continue;
+                if (px < -w / 2 || px > w * 1.5 || py < -h / 2 || py > h * 1.5) continue;
 
-    // 大小随距离变化，越近越大，调整最大/最小尺寸
-    let size = (1 - s.z/w) * 2 + 0.5; // 确保最小尺寸为 0.5
-    ctx.fillStyle=s.color;
-    ctx.beginPath();
-    ctx.arc(px,py,size,0,Math.PI*2);
-    ctx.fill();
-  }
-  requestAnimationFrame(animate); // 请求下一帧动画
-}
-initStars(); // 初始化星星
-animate(); // 启动动画
+                let size = (1 - s.z / w) * 2 + 0.5; // 确保最小尺寸为 0.5
+                ctx.fillStyle = s.color;
+                ctx.beginPath();
+                ctx.arc(px, py, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            requestAnimationFrame(animate); // 请求下一帧动画
+        }
+        initStars(); // 初始化星星
+        animate(); // 启动动画
 
-/* 导航滚动效果 */
-const nav=document.getElementById('nav');
-document.addEventListener('scroll',()=>{
-  if(window.scrollY>24){nav.classList.add('scrolled');}
-  else{nav.classList.remove('scrolled');}
-});
+        /* 导航滚动效果 */
+        const nav = document.getElementById('nav');
+        document.addEventListener('scroll', () => {
+            if (window.scrollY > 24) { nav.classList.add('scrolled'); }
+            else { nav.classList.remove('scrolled'); }
+        });
 
-/* 进入视口渐入 (Reveal) 动画 */
-const io=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{
-    // 如果元素进入视口，则添加 'show' 类，并停止观察
-    if(e.isIntersecting){e.target.classList.add('show');io.unobserve(e.target);}
-  });
-},{threshold:.1}); // 元素10%进入视口时触发
-document.querySelectorAll('.reveal').forEach(el=>io.observe(el)); // 观察所有带有 'reveal' 类的元素
-</script>
+        /* 进入视口渐入 (Reveal) 动画 */
+        const io = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting) { e.target.classList.add('show'); io.unobserve(e.target); }
+            });
+        }, { threshold: .1 }); // 元素10%进入视口时触发
+        document.querySelectorAll('.reveal').forEach(el => io.observe(el)); // 观察所有带有 'reveal' 类的元素
+    </script>
 </body>
 </html>
