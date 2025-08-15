@@ -6,4 +6,4 @@
 
 ## 🚀 如何使用
 本项目是一个纯前端的静态网页，无需任何服务器配置即可运行。
-您也可以通过 [icccbm.world](https://icccbm.world) 直接访问本项目。
+您也可以通过 [un1.asia](https://un1.asia) 直接访问本项目。
