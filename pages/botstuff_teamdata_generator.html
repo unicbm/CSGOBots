@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SourceMod队伍数据生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid #4CAF50;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .output {
+            background: #1a1a1a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            border-radius: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .copy-btn {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            float: right;
+            margin-top: -10px;
+        }
+        
+        .copy-btn:hover {
+            box-shadow: 0 10px 20px rgba(33, 150, 243, 0.3);
+        }
+        
+        .info {
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            border-left: 5px solid #2196F3;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .example {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f0f0f0;
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: #e0e0e0;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #4CAF50;
+        }
+        
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 0 0 10px 10px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 SourceMod 队伍数据生成器</h1>
+            <p>自动从现有代码提取队伍信息并生成优化的数据结构</p>
+        </div>
+        
+        <div class="content">
+            <div class="info">
+                <strong>使用说明：</strong>将你的现有SourceMod队伍代码粘贴到下方文本框中，工具会自动提取队伍信息并生成优化的代码。支持别名处理和数百个队伍的批量处理。
+            </div>
+            
+            <div class="section">
+                <h2>📥 输入现有代码</h2>
+                <textarea id="inputCode" placeholder="将你的SourceMod队伍代码粘贴到这里...
+
+例如:
+if(strcmp(szTeamArg, &quot;Flcn&quot;, false) == 0 || strcmp(szTeamArg, &quot;Falcons&quot;, false) == 0)
+{
+    if (strcmp(szSideArg, &quot;ct&quot;, false) == 0)
+    {
+        ServerCommand(&quot;bot_kick ct all&quot;);
+        ServerCommand(&quot;bot_add_ct %s&quot;, &quot;kyousuke&quot;);
+        ServerCommand(&quot;bot_add_ct %s&quot;, &quot;m0nesy&quot;);
+        ServerCommand(&quot;bot_add_ct %s&quot;, &quot;TeSeS&quot;);
+        ServerCommand(&quot;bot_add_ct %s&quot;, &quot;kyxsan&quot;);
+        ServerCommand(&quot;bot_add_ct %s&quot;, &quot;Niko&quot;);
+        ServerCommand(&quot;mp_teamlogo_1 fal&quot;);
+    }
+    // ... t side code
+}"></textarea>
+                
+                <button class="btn" onclick="parseTeams()">🔄 解析并生成代码</button>
+                <button class="btn" onclick="clearInput()">🗑️ 清空</button>
+            </div>
+            
+            <div class="section">
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('sourcemod')">SourceMod 代码</button>
+                    <button class="tab" onclick="showTab('data')">数据文件</button>
+                    <button class="tab" onclick="showTab('config')">配置说明</button>
+                </div>
+                
+                <div id="sourcemod" class="tab-content active">
+                    <h2>🎯 生成的 SourceMod 代码</h2>
+                    <button class="btn copy-btn" onclick="copyOutput('sourcemoOutput')">📋 复制代码</button>
+                    <textarea id="sourcemoOutput" class="output" readonly></textarea>
+                </div>
+                
+                <div id="data" class="tab-content">
+                    <h2>📊 队伍数据文件</h2>
+                    <button class="btn copy-btn" onclick="copyOutput('dataOutput')">📋 复制数据</button>
+                    <textarea id="dataOutput" class="output" readonly></textarea>
+                </div>
+                
+                <div id="config" class="tab-content">
+                    <h2>⚙️ 配置说明</h2>
+                    <div style="padding: 20px;">
+                        <h3>文件结构：</h3>
+                        <div class="example">addons/sourcemod/configs/teams.cfg</div>
+                        
+                        <h3>数据格式：</h3>
+                        <div class="example">"Teams"
+{
+    "Falcons"
+    {
+        "aliases"    "Flcn"
+        "players"    "kyousuke,m0nesy,TeSeS,kyxsan,Niko"
+        "logo"       "fal"
+    }
+}</div>
+                        
+                        <h3>使用方法：</h3>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>将生成的SourceMod代码替换你的现有代码</li>
+                            <li>将数据文件保存为 <code>addons/sourcemod/configs/teams.cfg</code></li>
+                            <li>重新编译并加载插件</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let teamsData = {};
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+        }
+
+        function clearInput() {
+            document.getElementById('inputCode').value = '';
+            document.getElementById('sourcemoOutput').value = '';
+            document.getElementById('dataOutput').value = '';
+        }
+
+        function parseTeams() {
+            const input = document.getElementById('inputCode').value;
+            teamsData = {};
+            
+            // Improved regex patterns
+            const teamBlocks = input.match(/if\s*\(\s*strcmp\s*\([^)]+\)\s*==\s*0[^}]+\}/g);
+            
+            if (!teamBlocks) {
+                alert('未找到有效的队伍代码块，请检查输入格式');
+                return;
+            }
+
+            teamBlocks.forEach(block => {
+                parseTeamBlock(block);
+            });
+
+            generateSourceModCode();
+            generateDataFile();
+        }
+
+        function parseTeamBlock(block) {
+            // Extract team names and aliases
+            const teamCondition = block.match(/if\s*\(\s*strcmp\s*\([^,]+,\s*"([^"]+)"[^)]*\)\s*==\s*0(?:\s*\|\|\s*strcmp\s*\([^,]+,\s*"([^"]+)"[^)]*\)\s*==\s*0)*/);
+            
+            if (!teamCondition) return;
+
+            const primaryName = teamCondition[1];
+            const alias = teamCondition[2];
+            
+            // Extract players
+            const playerMatches = block.match(/ServerCommand\s*\(\s*"bot_add_[ct]+\s+%s"\s*,\s*"([^"]+)"\s*\)/g);
+            const logoMatch = block.match(/ServerCommand\s*\(\s*"mp_teamlogo_[12]\s+([^"]+)"\s*\)/);
+            
+            if (!playerMatches) return;
+
+            const players = playerMatches.map(match => {
+                const playerMatch = match.match(/"([^"]+)"\s*\)$/);
+                return playerMatch ? playerMatch[1] : '';
+            }).filter(player => player);
+
+            // Remove duplicates and take first 5
+            const uniquePlayers = [...new Set(players)].slice(0, 5);
+            
+            if (uniquePlayers.length === 5) {
+                teamsData[primaryName] = {
+                    alias: alias || '',
+                    players: uniquePlayers,
+                    logo: logoMatch ? logoMatch[1] : primaryName.toLowerCase()
+                };
+            }
+        }
+
+        function generateSourceModCode() {
+            let code = `// Auto-generated SourceMod team management code
+// Generated by Team Data Generator
+// Compatible with older SourceMod versions
+
+#include <sourcemod>
+#include <cstrike>
+
+Handle g_TeamData = INVALID_HANDLE;
+
+public void OnPluginStart()
+{
+    LoadTeamData();
+}
+
+void LoadTeamData()
+{
+    char configPath[PLATFORM_MAX_PATH];
+    BuildPath(Path_SM, configPath, sizeof(configPath), "configs/teams.cfg");
+    
+    if (g_TeamData != INVALID_HANDLE)
+    {
+        CloseHandle(g_TeamData);
+    }
+    
+    g_TeamData = CreateKeyValues("Teams");
+    
+    if (!FileToKeyValues(g_TeamData, configPath))
+    {
+        LogError("Failed to load teams config file: %s", configPath);
+        CloseHandle(g_TeamData);
+        g_TeamData = INVALID_HANDLE;
+        return;
+    }
+    
+    LogMessage("Loaded teams configuration successfully");
+}
+
+public void OnPluginEnd()
+{
+    if (g_TeamData != INVALID_HANDLE)
+    {
+        CloseHandle(g_TeamData);
+        g_TeamData = INVALID_HANDLE;
+    }
+}
+
+// Main function to handle team commands
+bool HandleTeamCommand(const char[] szTeamArg, const char[] szSideArg)
+{
+    if (g_TeamData == INVALID_HANDLE)
+    {
+        LogError("Team data not loaded");
+        return false;
+    }
+    
+    char teamName[64];
+    if (!FindTeamByNameOrAlias(szTeamArg, teamName, sizeof(teamName)))
+    {
+        return false; // Team not found
+    }
+    
+    return LoadTeamPlayers(teamName, szSideArg);
+}
+
+bool FindTeamByNameOrAlias(const char[] searchName, char[] teamName, int maxlen)
+{
+    KvRewind(g_TeamData);
+    
+    if (KvGotoFirstSubKey(g_TeamData))
+    {
+        do
+        {
+            KvGetSectionName(g_TeamData, teamName, maxlen);
+            
+            // Check direct name match
+            if (strcmp(teamName, searchName, false) == 0)
+            {
+                return true;
+            }
+            
+            // Check aliases
+            char aliases[256];
+            KvGetString(g_TeamData, "aliases", aliases, sizeof(aliases));
+            
+            if (strlen(aliases) > 0)
+            {
+                char aliasList[16][32];
+                int count = ExplodeString(aliases, ",", aliasList, sizeof(aliasList), sizeof(aliasList[]));
+                
+                for (int i = 0; i < count; i++)
+                {
+                    TrimString(aliasList[i]);
+                    if (strcmp(aliasList[i], searchName, false) == 0)
+                    {
+                        return true;
+                    }
+                }
+            }
+            
+        } while (KvGotoNextKey(g_TeamData));
+    }
+    
+    return false;
+}
+
+bool LoadTeamPlayers(const char[] teamName, const char[] szSideArg)
+{
+    KvRewind(g_TeamData);
+    
+    if (!KvJumpToKey(g_TeamData, teamName))
+    {
+        return false;
+    }
+    
+    char players[256];
+    char logo[32];
+    
+    KvGetString(g_TeamData, "players", players, sizeof(players));
+    KvGetString(g_TeamData, "logo", logo, sizeof(logo));
+    
+    if (strlen(players) == 0)
+    {
+        return false;
+    }
+    
+    char playerList[5][32];
+    int playerCount = ExplodeString(players, ",", playerList, sizeof(playerList), sizeof(playerList[]));
+    
+    if (playerCount != 5)
+    {
+        LogError("Team %s does not have exactly 5 players (%d found)", teamName, playerCount);
+        return false;
+    }
+    
+    // Trim whitespace from player names
+    for (int i = 0; i < playerCount; i++)
+    {
+        TrimString(playerList[i]);
+    }
+    
+    if (strcmp(szSideArg, "ct", false) == 0)
+    {
+        ServerCommand("bot_kick ct all");
+        for (int i = 0; i < playerCount; i++)
+        {
+            ServerCommand("bot_add_ct %s", playerList[i]);
+        }
+        ServerCommand("mp_teamlogo_1 %s", logo);
+        return true;
+    }
+    else if (strcmp(szSideArg, "t", false) == 0)
+    {
+        ServerCommand("bot_kick t all");
+        for (int i = 0; i < playerCount; i++)
+        {
+            ServerCommand("bot_add_t %s", playerList[i]);
+        }
+        ServerCommand("mp_teamlogo_2 %s", logo);
+        return true;
+    }
+    
+    return false;
+}
+
+// Example usage in your command handler:
+/*
+public Action Command_LoadTeam(int client, int args)
+{
+    if (args < 2)
+    {
+        ReplyToCommand(client, "Usage: sm_loadteam <team> <ct/t>");
+        return Plugin_Handled;
+    }
+    
+    char teamArg[64], sideArg[8];
+    GetCmdArg(1, teamArg, sizeof(teamArg));
+    GetCmdArg(2, sideArg, sizeof(sideArg));
+    
+    if (HandleTeamCommand(teamArg, sideArg))
+    {
+        ReplyToCommand(client, "Team %s loaded successfully", teamArg);
+    }
+    else
+    {
+        ReplyToCommand(client, "Failed to load team: %s", teamArg);
+    }
+    
+    return Plugin_Handled;
+}
+*/`;
+
+            document.getElementById('sourcemoOutput').value = code;
+        }
+
+        function generateDataFile() {
+            let configData = '"Teams"\n{\n';
+            
+            for (const [teamName, data] of Object.entries(teamsData)) {
+                configData += `    "${teamName}"\n    {\n`;
+                
+                if (data.alias) {
+                    configData += `        "aliases"    "${data.alias}"\n`;
+                }
+                
+                configData += `        "players"    "${data.players.join(',')}"\n`;
+                configData += `        "logo"       "${data.logo}"\n`;
+                configData += `    }\n\n`;
+            }
+            
+            configData += '}';
+            
+            document.getElementById('dataOutput').value = configData;
+        }
+
+        function copyOutput(elementId) {
+            const output = document.getElementById(elementId);
+            output.select();
+            document.execCommand('copy');
+            
+            // Visual feedback
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✅ 已复制';
+            btn.style.background = '#4CAF50';
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+        }
+
+        // Initialize with sample data
+        window.onload = function() {
+            const sampleCode = `if(strcmp(szTeamArg, "Flcn", false) == 0 || strcmp(szTeamArg, "Falcons", false) == 0)
+{
+    if (strcmp(szSideArg, "ct", false) == 0)
+    {
+        ServerCommand("bot_kick ct all");
+        ServerCommand("bot_add_ct %s", "kyousuke");
+        ServerCommand("bot_add_ct %s", "m0nesy");
+        ServerCommand("bot_add_ct %s", "TeSeS");
+        ServerCommand("bot_add_ct %s", "kyxsan");
+        ServerCommand("bot_add_ct %s", "Niko");
+        ServerCommand("mp_teamlogo_1 fal");
+    }
+    
+    if (strcmp(szSideArg, "t", false) == 0)
+    {
+        ServerCommand("bot_kick t all");
+        ServerCommand("bot_add_t %s", "kyousuke");
+        ServerCommand("bot_add_t %s", "m0nesy");
+        ServerCommand("bot_add_t %s", "TeSeS");
+        ServerCommand("bot_add_t %s", "kyxsan");
+        ServerCommand("bot_add_t %s", "Niko");
+        ServerCommand("mp_teamlogo_2 fal");
+    }
+}
+
+if(strcmp(szTeamArg, "NiP", false) == 0)
+{
+    if (strcmp(szSideArg, "ct", false) == 0)
+    {
+        ServerCommand("bot_kick ct all");
+        ServerCommand("bot_add_ct %s", "r1nkle");
+        ServerCommand("bot_add_ct %s", "arrozdoce");
+        ServerCommand("bot_add_ct %s", "ewjerkz");
+        ServerCommand("bot_add_ct %s", "sjuush");
+        ServerCommand("bot_add_ct %s", "Snappi");
+        ServerCommand("mp_teamlogo_1 nip");
+    }
+    
+    if (strcmp(szSideArg, "t", false) == 0)
+    {
+        ServerCommand("bot_kick t all");
+        ServerCommand("bot_add_t %s", "r1nkle");
+        ServerCommand("bot_add_t %s", "arrozdoce");
+        ServerCommand("bot_add_t %s", "ewjerkz");
+        ServerCommand("bot_add_t %s", "sjuush");
+        ServerCommand("bot_add_t %s", "Snappi");
+        ServerCommand("mp_teamlogo_2 nip");
+    }
+}`;
+            
+            document.getElementById('inputCode').value = sampleCode;
+        };
+    </script>
+</body>
+</html>
